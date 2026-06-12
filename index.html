@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JJM 2.0 Scheme Monitoring Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    /* ===== LOGIN OVERLAY ===== */
+    .login-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(4px);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 100;
+    }
+    .login-card {
+        background: white; border-radius: 1rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+        padding: 2.5rem; max-width: 28rem; width: 90%;
+    }
+    .login-error { color: #dc2626; font-size: 0.875rem; margin-top: 0.75rem; display: none; }
+
+    /* ===== SCREEN ONLY STYLES ===== */
+    .screen-only { }
+    .print-only { display: none; }
+
+    /* ===== POPPING BUTTON ===== */
+    .btn-popping {
+        animation: pop 2s infinite;
+        box-shadow: 0 0 12px rgba(147, 51, 234, 0.6);
+    }
+    @keyframes pop {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.08); }
+    }
+
+    /* ===== ISOLATED PRINT LOGIC ===== */
+    @media print {
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        html, body {
+            margin: 0 !important; padding: 0 !important;
+            background: white !important; width: 100% !important;
+            font-family: 'Times New Roman', Times, serif !important;
+        }
+
+        .no-print, .login-overlay, header, main, #scnAlertBanner, #statsSection,
+        #filterSection, #tableSection, #emptyState, #toast, #reportModal,
+        #schemeDetailModal .no-print, .chart-container {
+            display: none !important;
+        }
+
+        .modal-backdrop { display: none !important; }
+
+        body.printing-scn #scnModal {
+            display: block !important; position: static !important; background: white !important;
+            overflow: visible !important; width: 100% !important; max-width: 100% !important;
+            box-shadow: none !important; border: none !important; margin: 0 !important;
+            padding: 0 !important; border-radius: 0 !important;
+        }
+        body.printing-scn #scnModal > div {
+            box-shadow: none !important; border: none !important; max-width: 100% !important;
+            margin: 0 !important; border-radius: 0 !important;
+        }
+        body.printing-scn .scn-preview-wrapper {
+            background: white !important; padding: 0 !important; max-height: none !important;
+            overflow: visible !important;
+        }
+        body.printing-scn #scnPreview {
+            box-shadow: none !important; padding: 12mm !important; margin: 0 auto !important;
+            width: auto !important; min-height: auto !important;
+            font-family: 'Times New Roman', Times, serif !important;
+            font-size: 12pt !important; color: black !important;
+        }
+        body.printing-scn #schemeDetailModal, body.printing-scn #reportModal { display: none !important; }
+
+        body.printing-scheme #schemeDetailModal {
+            display: block !important; position: static !important; background: white !important;
+            overflow: visible !important; width: 100% !important; max-width: 100% !important;
+            box-shadow: none !important; border: none !important; margin: 0 !important;
+            padding: 0 !important; border-radius: 0 !important;
+        }
+        body.printing-scheme #schemeDetailModal > div {
+            box-shadow: none !important; border: none !important; max-width: 100% !important;
+            margin: 0 !important; padding: 0 !important; border-radius: 0 !important;
+        }
+        body.printing-scheme #schemeDetailContent {
+            padding: 10mm !important; font-family: 'Times New Roman', Times, serif !important;
+            font-size: 11pt; line-height: 1.4;
+        }
+        body.printing-scheme .print-only { display: block !important; }
+        body.printing-scheme .screen-only { display: none !important; }
+        body.printing-scheme #scnModal, body.printing-scheme #reportModal { display: none !important; }
+
+        .print-header { text-align: center; margin-bottom: 8mm; border-bottom: 2px solid black; padding-bottom: 3mm; }
+        .print-header h1 { font-size: 18pt; font-weight: bold; margin: 0 0 2mm 0; letter-spacing: 1px; }
+        .print-header .subtitle { font-size: 14pt; font-weight: bold; margin: 0 0 1mm 0; }
+        .print-header .meta { font-size: 11pt; margin: 0; }
+
+        .scheme-info { width: 100%; border-collapse: collapse; margin-bottom: 5mm; font-size: 11pt; }
+        .scheme-info td { padding: 1.5mm 3mm; border: 1px solid #ccc; vertical-align: top; }
+        .scheme-info td.label { font-weight: bold; width: 30%; background: #f5f5f5; }
+
+        .exec-summary { width: 100%; border-collapse: collapse; margin-bottom: 5mm; font-size: 11pt; }
+        .exec-summary th, .exec-summary td { padding: 2mm 3mm; border: 1px solid #999; text-align: center; }
+        .exec-summary th { background: #f0f0f0; font-weight: bold; }
+
+        .task-table { width: 100%; border-collapse: collapse; font-size: 10pt; margin-bottom: 5mm; }
+        .task-table th, .task-table td { padding: 1.5mm 2mm; border: 1px solid #666; }
+        .task-table th { background: #e0e0e0; font-weight: bold; }
+        .task-table .status-critical { font-weight: bold; text-transform: uppercase; }
+        .task-table .status-upcoming { font-weight: bold; }
+        .task-table .status-scheduled { font-style: italic; }
+        .task-table .completion { text-align: center; font-weight: bold; }
+
+        .signature-section { margin-top: 10mm; display: flex; justify-content: space-between; page-break-inside: avoid; }
+        .signature-box { width: 45%; text-align: center; }
+        .signature-line { border-top: 1px solid black; margin-top: 15mm; margin-bottom: 2mm; }
+
+        body.printing-report #reportModal {
+            display: block !important; position: static !important; background: white !important;
+            overflow: visible !important; width: 100% !important; max-width: 100% !important;
+            box-shadow: none !important; border: none !important; margin: 0 !important;
+            padding: 0 !important; border-radius: 0 !important;
+        }
+        body.printing-report #reportModal > div {
+            box-shadow: none !important; border: none !important; max-width: 100% !important;
+            margin: 0 !important; padding: 0 !important; border-radius: 0 !important;
+        }
+        body.printing-report .report-preview-wrapper {
+            background: white !important; padding: 0 !important; max-height: none !important;
+            overflow: visible !important;
+        }
+        body.printing-report #reportPreview {
+            box-shadow: none !important; padding: 15mm 15mm 20mm 15mm !important;
+            margin: 0 auto !important; width: auto !important; min-height: auto !important;
+            font-family: 'Times New Roman', Times, serif !important;
+            font-size: 12pt !important; color: black !important; line-height: 1.4;
+        }
+
+        .report-header { text-align: center; margin-bottom: 8mm; border-bottom: 3px double #000; padding-bottom: 4mm; }
+        .report-header h1 { font-size: 20pt; font-weight: bold; margin: 0 0 3mm 0; letter-spacing: 2px; }
+        .report-header .subtitle { font-size: 16pt; font-weight: bold; margin: 0 0 2mm 0; }
+        .report-header .meta { font-size: 11pt; margin: 1mm 0 0 0; }
+
+        .report-section { margin-bottom: 6mm; }
+        .report-section h2 { font-size: 14pt; font-weight: bold; border-bottom: 1px solid #999; padding-bottom: 2mm; margin-bottom: 3mm; }
+
+        .summary-table { width: 100%; border-collapse: collapse; font-size: 11pt; margin-bottom: 5mm; }
+        .summary-table td { padding: 2mm 3mm; border: 1px solid #888; }
+        .summary-table .label { font-weight: bold; width: 40%; }
+
+        .scheme-table { width: 100%; border-collapse: collapse; font-size: 10pt; margin-bottom: 5mm; }
+        .scheme-table th, .scheme-table td { padding: 1.5mm 2mm; border: 1px solid #666; text-align: center; }
+        .scheme-table th { background: #e8e8e8; font-weight: bold; }
+        .scheme-table td { text-align: left; }
+
+        .critical-list { font-size: 11pt; margin: 0 0 5mm 0; padding-left: 15mm; }
+
+        .footer { margin-top: 12mm; border-top: 1px solid #999; padding-top: 3mm; text-align: center; font-size: 10pt; color: #555; }
+
+        @page {
+            size: A4 portrait;
+            margin: 12mm 15mm 25mm 15mm;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-family: 'Times New Roman', Times, serif;
+                font-size: 9pt; color: #555;
+            }
+        }
+
+        .report-section { page-break-inside: avoid; }
+        .scheme-table { page-break-inside: auto; }
+        .scheme-table tr { page-break-inside: avoid; }
+    }
+
+    .modal-backdrop { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(3px); }
+    .sort-icon { opacity: 0.3; transition: opacity 0.2s; cursor: pointer; }
+    .sort-icon.active { opacity: 1; color: #3b82f6; }
+    .sortable-header { cursor: pointer; user-select: none; }
+    .sortable-header:hover .sort-icon { opacity: 0.7; }
+    .completion-input { width: 60px; padding: 2px 4px; text-align: center; border: 1px solid #d1d5db; border-radius: 4px; }
+</style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans antialiased min-h-screen">
+
+<!-- ===== LOGIN OVERLAY ===== -->
+<div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+        <div class="text-center mb-6">
+            <div class="bg-blue-700 text-white w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
+                <i class="fas fa-water text-2xl"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-900">JJM 2.0 Monitor</h2>
+            <p class="text-sm text-gray-500">Enter credentials to access the dashboard</p>
+        </div>
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">Username</label>
+                <input type="text" id="username" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Username" required>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">Password</label>
+                <input type="password" id="password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Password" required>
+            </div>
+            <div id="loginError" class="login-error"></div>
+            <button type="submit" class="w-full py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+                <i class="fas fa-sign-in-alt mr-2"></i> Sign In
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- ===== HEADER ===== -->
+<header class="bg-white border-b border-gray-200 shadow-sm no-print sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-700 text-white p-2 rounded-lg shadow-sm"><i class="fas fa-water text-lg"></i></div>
+            <div>
+                <h1 class="text-lg font-bold text-gray-900 leading-tight">Scheme Monitoring</h1>
+                <p class="text-xs text-gray-500">JJM 2.0 Task deadline tracker</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-right hidden sm:block">
+                <p class="text-xs text-gray-400 uppercase font-semibold tracking-wide">Report date</p>
+                <p class="text-sm font-bold text-gray-700" id="headerDate">-</p>
+            </div>
+            <button onclick="openSCNPreview()" id="btnShowCause" class="px-4 py-2 text-sm border border-red-600 text-red-600 rounded-lg hover:bg-red-50 font-medium transition-colors" style="display:none;">
+                <i class="fas fa-gavel mr-1"></i> Show Cause Notice
+            </button>
+            <button onclick="openReportPreview()" class="px-4 py-2 text-sm bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium transition-colors flex items-center">
+                <i class="fas fa-print mr-2"></i> Print report
+            </button>
+            <!-- ===== POPPING BUTTON: Create Schematic Timelines ===== -->
+            <a href="https://script.google.com/macros/s/AKfycbxNqsq8H-FqvvuA72QGGefxZYn8RmzSCA7brygdSuxpJWNP0WE5i2qv_UgZRVxgIkSC/exec" target="_blank" class="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-all flex items-center shadow-lg btn-popping">
+                <i class="fas fa-diagram-project mr-2"></i> <span class="hidden sm:inline">Create Schematic Timelines</span>
+            </a>
+        </div>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- SCN Alert Banner -->
+    <section id="scnAlertBanner" class="bg-red-50 border border-red-200 rounded-xl p-4 no-print" style="display:none;">
+        <div class="flex items-start gap-3">
+            <div class="bg-red-100 p-2 rounded-full flex-shrink-0"><i class="fas fa-exclamation-triangle text-red-600"></i></div>
+            <div class="flex-1">
+                <h3 class="text-red-800 font-bold text-base">Show Cause Notice Triggered</h3>
+                <ul id="scnAlertList" class="text-red-700 text-sm mt-1 list-disc list-inside"></ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Cards -->
+    <section id="statsSection" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 no-print" style="display:none;">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <p class="text-gray-500 text-xs uppercase font-bold tracking-wide">Total Schemes</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1" id="statSchemes">0</p>
+            <p class="text-xs text-gray-500 mt-1" id="statTasks">0 tasks across all</p>
+        </div>
+        <div class="bg-emerald-50 p-4 rounded-xl shadow-sm border border-emerald-100">
+            <p class="text-emerald-700 text-xs uppercase font-bold tracking-wide">Fully Completed</p>
+            <p class="text-3xl font-bold text-emerald-700 mt-1" id="statCompletedSchemes">0</p>
+            <p class="text-xs text-emerald-600 mt-1">All tasks at 100%</p>
+        </div>
+        <div class="bg-red-50 p-4 rounded-xl shadow-sm border border-red-100">
+            <p class="text-red-600 text-xs uppercase font-bold tracking-wide">Critical</p>
+            <p class="text-3xl font-bold text-red-700 mt-1" id="statCritical">0</p>
+            <p class="text-xs text-red-500 mt-1">Tasks due within 7 days</p>
+        </div>
+        <div class="bg-orange-50 p-4 rounded-xl shadow-sm border border-orange-100">
+            <p class="text-orange-600 text-xs uppercase font-bold tracking-wide">Upcoming</p>
+            <p class="text-3xl font-bold text-orange-700 mt-1" id="statUpcoming">0</p>
+            <p class="text-xs text-orange-500 mt-1">Tasks due in 8–30 days</p>
+        </div>
+        <div class="bg-green-50 p-4 rounded-xl shadow-sm border border-green-100">
+            <p class="text-green-600 text-xs uppercase font-bold tracking-wide">Scheduled</p>
+            <p class="text-3xl font-bold text-green-700 mt-1" id="statScheduled">0</p>
+            <p class="text-xs text-green-500 mt-1">Tasks due beyond 30 days</p>
+        </div>
+    </section>
+
+    <!-- Abstract Report (Due‑date‑wise overall completion) -->
+    <section id="abstractReportSection" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 no-print" style="display:none;">
+        <h2 class="text-lg font-bold text-gray-900 mb-3">Abstract Report – Due‑date‑wise Completion</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Month</th>
+                        <th class="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">Tasks Due</th>
+                        <th class="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">Avg. Completion %</th>
+                    </tr>
+                </thead>
+                <tbody id="abstractReportBody" class="divide-y divide-gray-100"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Filters -->
+    <section id="filterSection" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 no-print" style="display:none;">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-bold text-gray-900">All Schemes</h2>
+            <button onclick="toggleFilters()" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-gray-700 transition-colors">
+                <i class="fas fa-filter mr-1"></i> Filters
+            </button>
+        </div>
+        <div id="filterPanel" class="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center pt-4 border-t border-gray-100" style="display:none;">
+            <div class="flex-1 w-full lg:w-auto">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    <input type="text" id="globalSearch" placeholder="Search by scheme name, ID, or contractor..."
+                           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2 w-full lg:w-auto">
+                <select id="filterOfficer" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500"><option value="">All Section Officers</option></select>
+                <select id="filterContractor" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500"><option value="">All Contractors</option></select>
+                <select id="filterComponent" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500"><option value="">All Components</option></select>
+                <button onclick="clearFilters()" class="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">Clear</button>
+                <button onclick="applyFilters()" class="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 font-medium">Apply</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scheme Table -->
+    <section id="tableSection" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden no-print" style="display:none;">
+        <div class="p-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <h2 class="text-lg font-bold text-gray-900">Scheme List</h2>
+            <div class="flex items-center gap-2 text-sm">
+                <span class="text-gray-600">Show</span>
+                <select id="pageSizeSelect" onchange="changePageSize()" class="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-blue-500">
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="15">15</option>
+                    <option value="20">20</option>
+                    <option value="all">All</option>
+                </select>
+                <span class="text-gray-600">entries</span>
+                <button onclick="exportToCSV()" class="ml-4 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-1">
+                    <i class="fas fa-download"></i> Export CSV
+                </button>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider sortable-header" onclick="sortBy('scheme_id')">
+                            Scheme ID <i class="fas fa-sort sort-icon ml-1" id="sort-icon-scheme_id"></i>
+                        </th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider sortable-header" onclick="sortBy('scheme_name')">
+                            Scheme Name <i class="fas fa-sort sort-icon ml-1" id="sort-icon-scheme_name"></i>
+                        </th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider sortable-header" onclick="sortBy('section_officer')">
+                            Section Officer <i class="fas fa-sort sort-icon ml-1" id="sort-icon-section_officer"></i>
+                        </th>
+                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider sortable-header" onclick="sortBy('contractor')">
+                            Contractor <i class="fas fa-sort sort-icon ml-1" id="sort-icon-contractor"></i>
+                        </th>
+                        <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider sortable-header" onclick="sortBy('tasks')">
+                            Tasks <i class="fas fa-sort sort-icon ml-1" id="sort-icon-tasks"></i>
+                        </th>
+                        <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider sortable-header" onclick="sortBy('avg_completion')">
+                            Avg. Completion <i class="fas fa-sort sort-icon ml-1" id="sort-icon-avg_completion"></i>
+                        </th>
+                        <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider sortable-header" onclick="sortBy('critical')">
+                            Critical <i class="fas fa-sort sort-icon ml-1" id="sort-icon-critical"></i>
+                        </th>
+                        <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider sortable-header" onclick="sortBy('upcoming')">
+                            Upcoming <i class="fas fa-sort sort-icon ml-1" id="sort-icon-upcoming"></i>
+                        </th>
+                        <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider sortable-header" onclick="sortBy('scheduled')">
+                            Scheduled <i class="fas fa-sort sort-icon ml-1" id="sort-icon-scheduled"></i>
+                        </th>
+                        <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">SCN</th>
+                        <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody" class="bg-white divide-y divide-gray-200"></tbody>
+            </table>
+        </div>
+        <div id="paginationContainer" class="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+            <div class="text-sm text-gray-600" id="paginationInfo">Showing 0 to 0 of 0 entries</div>
+            <div class="flex gap-1" id="paginationButtons"></div>
+        </div>
+    </section>
+
+    <!-- Empty State -->
+    <section id="emptyState" class="text-center py-20 no-print" style="display:none;">
+        <div class="bg-white p-12 rounded-2xl shadow-sm border border-gray-100 max-w-2xl mx-auto">
+            <div class="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-chart-line text-blue-600 text-3xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Loading Data...</h2>
+            <p class="text-gray-500">Please wait while the dashboard fetches the latest scheme data.</p>
+        </div>
+    </section>
+</main>
+
+<!-- Scheme Detail Modal -->
+<div id="schemeDetailModal" class="fixed inset-0 z-40 hidden modal-backdrop overflow-y-auto">
+    <div class="min-h-screen flex items-start justify-center p-4 py-6">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl relative my-4">
+            <div class="flex justify-between items-center p-4 border-b border-gray-200 no-print sticky top-0 bg-white z-10 rounded-t-xl">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900" id="detailSchemeName">-</h2>
+                    <p class="text-sm text-gray-500" id="detailSchemeId">-</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="openSCNForCurrentScheme()" class="px-4 py-2 text-sm border border-red-600 text-red-600 rounded-lg hover:bg-red-50 font-medium">
+                        <i class="fas fa-gavel mr-1"></i> Generate SCN
+                    </button>
+                    <button onclick="closeSchemeDetail()" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Close</button>
+                    <button onclick="printSchemeDetail()" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm">
+                        <i class="fas fa-print mr-1"></i> Print
+                    </button>
+                </div>
+            </div>
+            <div class="p-6" id="schemeDetailContent"></div>
+        </div>
+    </div>
+</div>
+
+<!-- SCN Modal -->
+<div id="scnModal" class="fixed inset-0 z-50 hidden modal-backdrop overflow-y-auto">
+    <div class="min-h-screen flex items-start justify-center p-4 py-6">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl relative my-4">
+            <div class="flex justify-between items-center p-4 border-b border-gray-200 no-print sticky top-0 bg-white z-10 rounded-t-xl">
+                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                    <i class="fas fa-gavel text-red-600"></i> Show Cause Notice — Preview
+                </h2>
+                <div class="flex gap-2">
+                    <button onclick="closeSCNModal()" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Close</button>
+                    <button onclick="printSCN()" class="px-4 py-2 text-sm bg-red-700 text-white rounded-lg hover:bg-red-800 font-semibold shadow-sm">
+                        <i class="fas fa-print mr-1"></i> Print / PDF
+                    </button>
+                </div>
+            </div>
+            <div class="p-4 bg-blue-50 border-b border-blue-100 no-print">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-xs font-bold text-blue-900 uppercase tracking-wide flex items-center gap-1"><i class="fas fa-edit"></i> Editable Notice Details</h3>
+                    <span class="text-[10px] text-blue-600 font-medium bg-blue-100 px-2 py-0.5 rounded-full">LIVE PREVIEW</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div><label class="block text-[10px] font-bold text-blue-800 mb-1 uppercase">Division / Office Name</label><input type="text" id="editDivision" placeholder="e.g., JJM Division, Titabor" class="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" oninput="updateSCNPreview()"></div>
+                    <div><label class="block text-[10px] font-bold text-blue-800 mb-1 uppercase">Contractor Name</label><input type="text" id="editContractorName" placeholder="e.g., M/s Arupjyoti Gogoi" class="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" oninput="updateSCNPreview()"></div>
+                    <div><label class="block text-[10px] font-bold text-blue-800 mb-1 uppercase">Contract Agreement No.</label><input type="text" id="editContractNo" placeholder="e.g., CA/2025-26/045" class="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" oninput="updateSCNPreview()"></div>
+                    <div><label class="block text-[10px] font-bold text-blue-800 mb-1 uppercase">Work Order Date</label><input type="text" id="editWorkOrderDate" placeholder="e.g., 15 Mar 2026" class="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" oninput="updateSCNPreview()"></div>
+                    <div><label class="block text-[10px] font-bold text-blue-800 mb-1 uppercase">Scheduled Completion Date</label><input type="text" id="editSchedCompDate" placeholder="e.g., 30 Sep 2026" class="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" oninput="updateSCNPreview()"></div>
+                    <div class="md:col-span-3"><label class="block text-[10px] font-bold text-blue-800 mb-1 uppercase">Contractor Address</label><textarea id="editContractorAddress" rows="2" placeholder="Address line 1&#10;City, State - PIN" class="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white resize-none" oninput="updateSCNPreview()"></textarea></div>
+                </div>
+            </div>
+            <div class="p-3 bg-gray-100 border-b border-gray-200 no-print flex flex-wrap gap-4 items-center text-xs">
+                <span class="font-bold text-gray-700 flex items-center gap-1"><i class="fas fa-ruler-combined"></i> Print Margins:</span>
+                <label class="flex items-center gap-1">Top: <input type="number" id="marginTop" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins()"> mm</label>
+                <label class="flex items-center gap-1">Bottom: <input type="number" id="marginBottom" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins()"> mm</label>
+                <label class="flex items-center gap-1">Left: <input type="number" id="marginLeft" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins()"> mm</label>
+                <label class="flex items-center gap-1">Right: <input type="number" id="marginRight" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins()"> mm</label>
+                <span class="text-gray-500 ml-auto font-medium">A4 Portrait</span>
+            </div>
+            <div class="scn-preview-wrapper p-8 bg-gray-200" style="max-height: calc(100vh - 220px); overflow-y: auto;">
+                <div id="scnPreview" class="bg-white shadow-lg mx-auto" style="width: 210mm; min-height: 297mm; padding: 20mm; box-sizing: border-box; font-family: 'Times New Roman', Times, serif; color: #1a1a1a; line-height: 1.6; font-size: 12pt;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Modal -->
+<div id="reportModal" class="fixed inset-0 z-50 hidden modal-backdrop overflow-y-auto">
+    <div class="min-h-screen flex items-start justify-center p-4 py-6">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl relative my-4">
+            <div class="flex justify-between items-center p-4 border-b border-gray-200 no-print sticky top-0 bg-white z-10 rounded-t-xl">
+                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                    <i class="fas fa-file-alt text-blue-700"></i> Abstract Report — Preview
+                </h2>
+                <div class="flex gap-2">
+                    <button onclick="closeReportModal()" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Close</button>
+                    <button onclick="printReport()" class="px-4 py-2 text-sm bg-blue-700 text-white rounded-lg hover:bg-blue-800 font-semibold shadow-sm">
+                        <i class="fas fa-print mr-1"></i> Print / PDF
+                    </button>
+                </div>
+            </div>
+            <div class="report-preview-wrapper p-8 bg-gray-200" style="max-height: calc(100vh - 220px); overflow-y: auto;">
+                <div id="reportPreview" class="bg-white shadow-lg mx-auto" style="width: 210mm; min-height: 297mm; padding: 20mm; box-sizing: border-box; font-family: 'Times New Roman', Times, serif; color: #1a1a1a; line-height: 1.6; font-size: 12pt;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-5 right-5 z-[60] hidden transform transition-all duration-300 translate-y-10 opacity-0">
+    <div id="toastContent" class="bg-white border-l-4 border-green-500 shadow-xl rounded-lg p-4 flex items-center gap-3 min-w-[300px]">
+        <i id="toastIcon" class="fas fa-check-circle text-green-500 text-xl"></i>
+        <div><p id="toastTitle" class="text-sm font-bold text-gray-900">Success</p><p id="toastMessage" class="text-xs text-gray-600 mt-0.5"></p></div>
+    </div>
+</div>
+
+<script>
+// ==========================================
+// CONFIGURATION
+// ==========================================
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxjUD-eB003X0yhD0wmtMsiwm2rHmEER8hGZi7EcZdJc2xMOTg0WGZiJPN0rmuJ9f8n/exec";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZnZvA5Z9rKm18OYDe008BRBVLTzifwam0qkcnm0L1n4ejcQgEoiPCel4TqQvDn2cE3xvV68G2psBi/pub?gid=1896948484&single=true&output=csv";
+
+// ==========================================
+// STATE
+// ==========================================
+const state = {
+    rawData: [], schemes: [], filtered: [],
+    filters: { search: '', officer: '', contractor: '', component: '' },
+    reportDate: new Date(),
+    currentSCNScheme: null,
+    currentDetailScheme: null,
+    currentDetailSchemeId: null,
+    scnDetails: { divisionName: '', contractorName: '', contractorAddress: '', contractAgreementNo: '', workOrderDate: '', scheduledCompletionDate: '' },
+    charts: { gantt: null, donut: null },
+    currentPage: 1,
+    pageSize: 5,
+    sortColumn: null,
+    sortDirection: 'asc',
+    originalCompletion: {}
+};
+
+// ==========================================
+// LOGIN
+// ==========================================
+const VALID_USER = "JJMTSK2026";
+const VALID_PASS = "JJM@2627";
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (sessionStorage.getItem('jjm_loggedIn') === 'true') {
+        document.getElementById('loginOverlay').style.display = 'none';
+        initDashboard();
+    } else {
+        document.getElementById('loginOverlay').style.display = 'flex';
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const user = document.getElementById('username').value.trim();
+        const pass = document.getElementById('password').value.trim();
+        const errorEl = document.getElementById('loginError');
+        if (user === VALID_USER && pass === VALID_PASS) {
+            sessionStorage.setItem('jjm_loggedIn', 'true');
+            document.getElementById('loginOverlay').style.display = 'none';
+            initDashboard();
+        } else {
+            errorEl.textContent = 'Invalid username or password.';
+            errorEl.style.display = 'block';
+        }
+    });
+});
+
+function initDashboard() {
+    document.getElementById('headerDate').textContent = formatDate(state.reportDate);
+    document.getElementById('globalSearch').addEventListener('input', e => { state.filters.search = e.target.value.toLowerCase(); applyFilters(); });
+    const savedPageSize = sessionStorage.getItem('jjm_page_size');
+    if (savedPageSize) {
+        state.pageSize = savedPageSize === 'all' ? 'all' : parseInt(savedPageSize);
+        document.getElementById('pageSizeSelect').value = savedPageSize;
+    }
+    loadGoogleSheet();
+    setInterval(loadGoogleSheet, 120000);
+}
+
+// ==========================================
+// GOOGLE SHEET FETCH
+// ==========================================
+async function loadGoogleSheet() {
+    try {
+        const response = await fetch(SHEET_URL + "&t=" + Date.now());
+        const csvText = await response.text();
+        Papa.parse(csvText, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                if (results.errors.length) {
+                    console.error('CSV parse errors:', results.errors);
+                    return;
+                }
+                processCSV(results.data);
+            }
+        });
+    } catch(error) {
+        console.error("Google Sheet fetch failed", error);
+        showToast('Refresh Failed', 'Could not load latest data.', 'error');
+    }
+}
+
+// ==========================================
+// CSV PROCESSING
+// ==========================================
+function processCSV(data) {
+    const required = ['scheme_id','scheme_name','section_officer','contractor','component','task','due_date','completion'];
+    const headers = Object.keys(data[0]).map(h => h.trim().toLowerCase());
+    const missing = required.filter(c => !headers.includes(c));
+    if (missing.length) { showToast('Validation Failed', `Missing columns: ${missing.join(', ')}`, 'error'); return; }
+
+    state.rawData = data.map(row => {
+        const s = {};
+        for (let k in row) { let v = row[k] ? String(row[k]).trim() : ''; if (/^[=+\-@]/.test(v)) v = "'" + v; s[k.trim().toLowerCase()] = v; }
+        let comp = parseInt(s.completion, 10);
+        s.completion = isNaN(comp) ? 0 : Math.max(0, Math.min(100, comp));
+        s.parsedDate = parseDate(s.due_date);
+        if (s.report_date) { const rd = parseDate(s.report_date); if (rd) state.reportDate = rd; }
+        state.originalCompletion[s.scheme_id + '|' + s.component + '|' + s.task] = s.completion;
+        return s;
+    });
+
+    aggregateSchemes(); populateFilters();
+    document.getElementById('headerDate').textContent = formatDate(state.reportDate);
+    document.getElementById('statsSection').style.display = 'grid';
+    document.getElementById('abstractReportSection').style.display = 'block';
+    document.getElementById('filterSection').style.display = 'block';
+    document.getElementById('tableSection').style.display = 'block';
+    document.getElementById('emptyState').style.display = 'none';
+    state.currentPage = 1;
+    applyFilters();
+    checkSCNTriggers();
+    updateAbstractReport();
+    showToast('Data Updated', `Loaded ${state.rawData.length} tasks across ${state.schemes.length} schemes.`, 'success');
+}
+
+function parseDate(str) {
+    if (!str) return null;
+    let d = new Date(str);
+    if (!isNaN(d.getTime())) return d;
+    const m = str.match(/(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/);
+    if (m) { const months = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11}; const mo = months[m[2].toLowerCase()]; if (mo !== undefined) return new Date(parseInt(m[3]), mo, parseInt(m[1])); }
+    return null;
+}
+function formatDate(d) { if (!d) return '—'; const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${String(d.getDate()).padStart(2,'0')} ${months[d.getMonth()]} ${d.getFullYear()}`; }
+function formatDateISO(d) { if (!d) return ''; return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`; }
+
+function aggregateSchemes() {
+    const grouped = {}, completedCounts = {};
+    state.rawData.forEach(row => {
+        const id = row.scheme_id;
+        if (!grouped[id]) { grouped[id] = { scheme_id: id, scheme_name: row.scheme_name||'N/A', section_officer: row.section_officer||'N/A', contractor: row.contractor||'N/A', tasks:0, totalCompletion:0, critical:0, upcoming:0, scheduled:0, scnTriggered:false, scnTasks:[], allTasksCompleted:false, latestDueDate: null }; completedCounts[id]=0; }
+        grouped[id].tasks++; grouped[id].totalCompletion += row.completion;
+        if (row.completion >= 100) completedCounts[id]++;
+        const days = row.parsedDate ? Math.ceil((row.parsedDate - state.reportDate) / (1000*60*60*24)) : null;
+        if (days !== null && days < 7 && row.completion < 100) grouped[id].critical++;
+        else if (days !== null && days >= 7 && days <= 30) grouped[id].upcoming++;
+        else grouped[id].scheduled++;
+
+        // Track latest due date for the scheme
+        if (row.parsedDate) {
+            if (!grouped[id].latestDueDate || row.parsedDate > grouped[id].latestDueDate) {
+                grouped[id].latestDueDate = row.parsedDate;
+            }
+        }
+    });
+    state.schemes = Object.values(grouped).map(s => { 
+        s.avg_completion = Math.round(s.totalCompletion / s.tasks); 
+        s.allTasksCompleted = (completedCounts[s.scheme_id] === s.tasks); 
+        return s; 
+    });
+}
+
+function checkSCNTriggers() {
+    let totalSCN = 0, totalCriticalTasks = 0;
+    state.schemes.forEach(scheme => {
+        const criticalTasks = state.rawData.filter(r => r.scheme_id === scheme.scheme_id && r.completion < 100 && r.parsedDate && Math.ceil((r.parsedDate - state.reportDate)/(1000*60*60*24)) < 7);
+        if (criticalTasks.length) {
+            scheme.scnTriggered = true;
+            scheme.scnTasks = criticalTasks.map(t => ({ component: t.component, task: t.task, due_date: t.due_date, completion: t.completion, daysRemaining: Math.ceil((t.parsedDate - state.reportDate)/(1000*60*60*24)), balance: 100 - t.completion }));
+            totalSCN++; totalCriticalTasks += criticalTasks.length;
+        } else { scheme.scnTriggered = false; scheme.scnTasks = []; }
+    });
+    document.getElementById('scnAlertBanner').style.display = totalSCN > 0 ? 'block' : 'none';
+    document.getElementById('scnAlertList').innerHTML = totalSCN > 0 ? `<li>${totalCriticalTasks} critical task${totalCriticalTasks!==1?'s':''} across ${totalSCN} scheme${totalSCN!==1?'s':''}</li>` : '';
+    document.getElementById('btnShowCause').style.display = totalSCN > 0 ? 'inline-flex' : 'none';
+}
+
+// ==========================================
+// ABSTRACT REPORT (Due‑date‑wise completion)
+// ==========================================
+function updateAbstractReport() {
+    const body = document.getElementById('abstractReportBody');
+    body.innerHTML = '';
+    if (state.rawData.length === 0) return;
+
+    const monthly = {};
+    state.rawData.forEach(row => {
+        if (!row.parsedDate) return;
+        const key = `${row.parsedDate.getFullYear()}-${String(row.parsedDate.getMonth()+1).padStart(2,'0')}`;
+        if (!monthly[key]) monthly[key] = { count: 0, totalCompletion: 0 };
+        monthly[key].count++;
+        monthly[key].totalCompletion += row.completion;
+    });
+
+    const sortedMonths = Object.keys(monthly).sort();
+    sortedMonths.forEach(month => {
+        const { count, totalCompletion } = monthly[month];
+        const avg = Math.round(totalCompletion / count);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="px-4 py-2 font-medium text-gray-800">${month}</td>
+            <td class="px-4 py-2 text-right font-bold text-gray-700">${count}</td>
+            <td class="px-4 py-2 text-right font-bold text-gray-700">${avg}%</td>
+        `;
+        body.appendChild(tr);
+    });
+}
+
+// ==========================================
+// SCHEME DETAIL (with editable completion & single Save button)
+// ==========================================
+function viewScheme(schemeId) {
+    const scheme = state.schemes.find(s => s.scheme_id === schemeId);
+    if (!scheme) return;
+    state.currentDetailScheme = scheme;
+    state.currentDetailSchemeId = schemeId;
+    const schemeTasks = state.rawData.filter(r => r.scheme_id === schemeId);
+    document.getElementById('detailSchemeName').textContent = scheme.scheme_name;
+    document.getElementById('detailSchemeId').textContent = `Scheme ID: ${scheme.scheme_id} | Report Date: ${formatDate(state.reportDate)}`;
+    const components = [...new Set(schemeTasks.map(t => t.component))];
+
+    const screenChartsHTML = `
+        <div class="bg-white border border-gray-200 rounded-lg p-4 mb-6 chart-container screen-only">
+            <h3 class="text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide">Days Remaining to Deadline</h3>
+            <div class="flex gap-4 mb-3 text-xs">
+                <span class="flex items-center gap-1"><span class="w-3 h-3 bg-red-600 rounded-sm"></span> Critical &lt;7 days</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 bg-orange-600 rounded-sm"></span> Upcoming 8-30 days</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 bg-green-700 rounded-sm"></span> Scheduled &gt;30 days</span>
+            </div>
+            <div style="height: ${Math.max(200, schemeTasks.length * 28)}px;"><canvas id="ganttChart"></canvas></div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6 screen-only">
+            <div class="bg-white border border-gray-200 rounded-lg p-4 chart-container">
+                <h3 class="text-xs font-bold text-gray-900 mb-3 uppercase tracking-wide">By Component</h3>
+                <div style="height: 180px;"><canvas id="donutChart"></canvas></div>
+                <div class="mt-3 space-y-1 text-xs" id="donutLegend"></div>
+            </div>
+            <div class="lg:col-span-3"></div>
+        </div>
+    `;
+
+    const completedTasks = schemeTasks.filter(t => t.completion >= 100).length;
+    const criticalTasks = schemeTasks.filter(t => t.parsedDate && Math.ceil((t.parsedDate - state.reportDate)/(1000*60*60*24)) < 7 && t.completion < 100).length;
+    const upcomingTasks = schemeTasks.filter(t => t.parsedDate && Math.ceil((t.parsedDate - state.reportDate)/(1000*60*60*24)) >= 7 && Math.ceil((t.parsedDate - state.reportDate)/(1000*60*60*24)) <= 30).length;
+    const scheduledTasks = schemeTasks.length - criticalTasks - upcomingTasks;
+    const overallStatus = scheme.allTasksCompleted ? 'COMPLETED' : (criticalTasks > 0 ? 'CRITICAL' : (upcomingTasks > 0 ? 'UPCOMING' : 'SCHEDULED'));
+
+    const printHeaderHTML = `
+        <div class="print-only print-header">
+            <h1>Jal Jeevan Mission (JJM 2.0)</h1>
+            <div class="subtitle">Scheme Monitoring Report</div>
+            <div class="meta">Division: ${escapeHtml(state.scnDetails.divisionName || 'JJM Division')} | Report Date: ${formatDate(state.reportDate)}</div>
+            <div class="meta">Generated on: ${new Date().toLocaleString()}</div>
+        </div>
+    `;
+
+    const schemeInfoHTML = `
+        <table class="scheme-info print-only">
+            <tr><td class="label">Scheme ID</td><td>${escapeHtml(scheme.scheme_id)}</td></tr>
+            <tr><td class="label">Scheme Name</td><td>${escapeHtml(scheme.scheme_name)}</td></tr>
+            <tr><td class="label">Section Officer</td><td>${escapeHtml(scheme.section_officer)}</td></tr>
+            <tr><td class="label">Contractor</td><td>${escapeHtml(scheme.contractor)}</td></tr>
+            <tr><td class="label">Report Date</td><td>${formatDate(state.reportDate)}</td></tr>
+        </table>
+    `;
+
+    const execSummaryHTML = `
+        <h3 class="print-only" style="margin:5mm 0 2mm 0; font-size:14pt;">Executive Summary</h3>
+        <table class="exec-summary print-only">
+            <thead><tr><th>Total Tasks</th><th>Completed</th><th>Critical</th><th>Upcoming</th><th>Scheduled</th><th>Avg. Completion</th><th>Overall Status</th></tr></thead>
+            <tbody><tr>
+                <td>${schemeTasks.length}</td>
+                <td>${completedTasks}</td>
+                <td>${criticalTasks}</td>
+                <td>${upcomingTasks}</td>
+                <td>${scheduledTasks}</td>
+                <td>${scheme.avg_completion}%</td>
+                <td class="status-critical">${overallStatus}</td>
+            </tr></tbody>
+        </table>
+    `;
+
+    let taskRowsHTML = '';
+    schemeTasks.forEach((task, idx) => {
+        const rawIndex = state.rawData.indexOf(task);
+        const days = task.parsedDate ? Math.ceil((task.parsedDate - state.reportDate) / (1000*60*60*24)) : null;
+        let statusText = 'SCHEDULED', statusClass = '';
+        if (days !== null) {
+            if (days < 7 && task.completion < 100) { statusText = 'CRITICAL'; statusClass = 'status-critical'; }
+            else if (days >= 7 && days <= 30) { statusText = 'UPCOMING'; statusClass = 'status-upcoming'; }
+            else { statusText = 'SCHEDULED'; statusClass = 'status-scheduled'; }
+        }
+        const daysText = days !== null ? `${days}d` : '-';
+        taskRowsHTML += `<tr>
+            <td>${escapeHtml(task.component)}</td>
+            <td>${escapeHtml(task.task)}</td>
+            <td>${task.due_date || '-'}</td>
+            <td class="completion">
+                <input type="number" class="completion-input" value="${task.completion}" min="0" max="100" data-raw-index="${rawIndex}">
+            </td>
+            <td class="${statusClass}">${statusText}</td>
+            <td>${daysText}</td>
+        </tr>`;
+    });
+
+    document.getElementById('schemeDetailContent').innerHTML = `
+        ${printHeaderHTML}
+        <div class="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-200 screen-only">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                <div><p class="text-[10px] text-gray-500 uppercase font-bold">Scheme ID</p><p class="font-bold text-gray-900 text-base">${escapeHtml(scheme.scheme_id)}</p></div>
+                <div><p class="text-[10px] text-gray-500 uppercase font-bold">Scheme Name</p><p class="font-semibold text-gray-900">${escapeHtml(scheme.scheme_name)}</p></div>
+                <div><p class="text-[10px] text-gray-500 uppercase font-bold">Section Officer</p><p class="font-semibold text-gray-900">${escapeHtml(scheme.section_officer)}</p></div>
+                <div><p class="text-[10px] text-gray-500 uppercase font-bold">Contractor</p><p class="font-semibold text-gray-900">${escapeHtml(scheme.contractor)}</p></div>
+                <div><p class="text-[10px] text-gray-500 uppercase font-bold">Report Date</p><p class="font-semibold text-gray-900">${formatDate(state.reportDate)}</p></div>
+            </div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 screen-only">
+            <div class="bg-white border border-gray-200 rounded-lg p-4"><p class="text-[10px] text-gray-500 uppercase font-bold">Total tasks</p><p class="text-3xl font-bold text-gray-900 mt-1">${scheme.tasks}</p><p class="text-xs text-gray-500 mt-1">Across ${components.length} components</p></div>
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4"><p class="text-[10px] text-red-600 uppercase font-bold">Critical</p><p class="text-3xl font-bold text-red-700 mt-1">${scheme.critical}</p><p class="text-xs text-red-500 mt-1">Due within 7 days</p></div>
+            <div class="bg-orange-50 border border-orange-200 rounded-lg p-4"><p class="text-[10px] text-orange-600 uppercase font-bold">Upcoming</p><p class="text-3xl font-bold text-orange-700 mt-1">${scheme.upcoming}</p><p class="text-xs text-orange-500 mt-1">Due in 8-30 days</p></div>
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4"><p class="text-[10px] text-green-600 uppercase font-bold">Avg. completion</p><p class="text-3xl font-bold text-green-700 mt-1">${scheme.avg_completion}%</p><p class="text-xs text-green-500 mt-1">${scheme.scheduled} tasks scheduled</p></div>
+        </div>
+        ${screenChartsHTML}
+        ${schemeInfoHTML}
+        ${execSummaryHTML}
+        <h3 style="margin:5mm 0 2mm 0; font-size:14pt;" class="print-only">Task Progress Details</h3>
+        <table class="task-table" style="width:100%;">
+            <thead><tr>
+                <th>Component</th>
+                <th>Task Description</th>
+                <th>Due Date</th>
+                <th>Completion %</th>
+                <th>Status</th>
+                <th>Days Rem.</th>
+            </tr></thead>
+            <tbody>${taskRowsHTML}</tbody>
+        </table>
+        <div class="mt-4 text-right screen-only">
+            <button onclick="saveProgressAndSync('${schemeId}')" class="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                <i class="fas fa-save mr-1"></i> Save Progress
+            </button>
+        </div>
+        <div class="signature-section mt-8 pt-6 border-t-2 border-gray-300">
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <p style="font-weight:bold;">Contractor</p>
+                <p>M/s ${escapeHtml(scheme.contractor)}</p>
+                <p>Date: _______________</p>
+            </div>
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <p style="font-weight:bold;">Section Officer</p>
+                <p>${escapeHtml(scheme.section_officer)}</p>
+                <p>Date: _______________</p>
+            </div>
+        </div>
+    `;
+
+    // Charts
+    const ganttCanvas = document.getElementById('ganttChart');
+    if (ganttCanvas) {
+        const ganttLabels = schemeTasks.map(t => `${t.component}: ${t.task}`);
+        const ganttData = schemeTasks.map(t => t.parsedDate ? Math.max(0, Math.ceil((t.parsedDate - state.reportDate) / (1000*60*60*24))) : 0);
+        const ganttColors = schemeTasks.map(t => {
+            if (!t.parsedDate) return '#059669';
+            const days = Math.ceil((t.parsedDate - state.reportDate) / (1000*60*60*24));
+            if (days < 7 && t.completion < 100) return '#dc2626';
+            if (days >= 7 && days <= 30) return '#d97706';
+            return '#059669';
+        });
+        if (state.charts.gantt) state.charts.gantt.destroy();
+        state.charts.gantt = new Chart(ganttCanvas.getContext('2d'), {
+            type: 'bar', data: { labels: ganttLabels, datasets: [{ data: ganttData, backgroundColor: ganttColors, borderRadius: 3, barPercentage: 0.7 }] },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+    }
+
+    const donutCanvas = document.getElementById('donutChart');
+    if (donutCanvas) {
+        const compCounts = {};
+        schemeTasks.forEach(t => { compCounts[t.component] = (compCounts[t.component] || 0) + 1; });
+        const donutLabels = Object.keys(compCounts);
+        const donutData = Object.values(compCounts);
+        const donutColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6'];
+        if (state.charts.donut) state.charts.donut.destroy();
+        state.charts.donut = new Chart(donutCanvas.getContext('2d'), {
+            type: 'doughnut', data: { labels: donutLabels, datasets: [{ data: donutData, backgroundColor: donutColors.slice(0, donutLabels.length), borderWidth: 0, hoverOffset: 4 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '60%' }
+        });
+        document.getElementById('donutLegend').innerHTML = donutLabels.map((l,i) => `<div class="flex justify-between items-center"><span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm" style="background-color:${donutColors[i%donutColors.length]}"></span>${escapeHtml(l)}</span><span class="font-bold text-gray-700">${donutData[i]}</span></div>`).join('');
+    }
+
+    document.getElementById('schemeDetailModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+// ==========================================
+// COMBINED SAVE – LOCAL UPDATE + SEND TO SHEET
+// ==========================================
+async function saveProgressAndSync(schemeId) {
+    const inputs = document.querySelectorAll('.completion-input');
+    const updates = [];
+    let changed = false;
+
+    inputs.forEach(inp => {
+        const rawIndex = parseInt(inp.getAttribute('data-raw-index'), 10);
+        if (!isNaN(rawIndex) && state.rawData[rawIndex]) {
+            let newVal = parseInt(inp.value, 10);
+            if (isNaN(newVal)) newVal = 0;
+            newVal = Math.max(0, Math.min(100, newVal));
+            const task = state.rawData[rawIndex];
+            if (task.completion !== newVal) {
+                task.completion = newVal;
+                changed = true;
+            }
+            const key = task.scheme_id + '|' + task.component + '|' + task.task;
+            const original = state.originalCompletion[key];
+            if (original !== undefined && original !== task.completion) {
+                updates.push({
+                    scheme_id: task.scheme_id,
+                    component: task.component,
+                    task: task.task,
+                    completion: task.completion
+                });
+            }
+        }
+    });
+
+    aggregateSchemes();
+    checkSCNTriggers();
+    applyFilters();
+    updateAbstractReport();
+
+    if (!changed && updates.length === 0) {
+        showToast('No Changes', 'All completion values are unchanged.', 'info');
+        viewScheme(schemeId);
+        return;
+    }
+
+    if (updates.length > 0) {
+        showToast('Saving...', `Updating ${updates.length} task(s) in the spreadsheet...`, 'info');
+        try {
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ updates })
+            });
+            updates.forEach(u => {
+                state.originalCompletion[u.scheme_id + '|' + u.component + '|' + u.task] = u.completion;
+            });
+            showToast('Saved', 'Progress saved locally and updated in the spreadsheet.', 'success');
+        } catch (error) {
+            console.error('Sheet update failed', error);
+            showToast('Partial Save', 'Local progress saved, but spreadsheet update failed.', 'error');
+        }
+    } else {
+        showToast('Saved Locally', 'Progress saved (no changes needed for the spreadsheet).', 'success');
+    }
+
+    viewScheme(schemeId);
+}
+
+function closeSchemeDetail() { document.getElementById('schemeDetailModal').classList.add('hidden'); document.body.style.overflow = ''; }
+
+// ==========================================
+// SCN
+// ==========================================
+function generateSCNContent(scheme) {
+    const refNo = `SCN/${scheme.scheme_id}/${formatDateISO(state.reportDate)}`;
+    const dateStr = formatDate(state.reportDate);
+    const division = state.scnDetails.divisionName || '[Division / Office Name]';
+    const contractorName = state.scnDetails.contractorName || scheme.contractor;
+    const contractorAddress = state.scnDetails.contractorAddress || '';
+    const contractNo = state.scnDetails.contractAgreementNo || '—';
+    const workOrderDate = state.scnDetails.workOrderDate || '—';
+    const schedCompDate = state.scnDetails.scheduledCompletionDate || '—';
+    let taskListHTML = '';
+    scheme.scnTasks.forEach((t, i) => {
+        let urgencyLabel = t.daysRemaining === 0 ? 'Milestone Due Today' : t.daysRemaining < 0 ? `${Math.abs(t.daysRemaining)} Days Overdue` : `${t.daysRemaining} Days to Deadline`;
+        taskListHTML += `<div style="margin: 12px 0 14px 24px; padding: 8px 12px; border-left: 3px solid #dc2626; background: #fefefe; page-break-inside: avoid;">
+            <div style="font-weight: bold; font-size: 12pt; margin-bottom: 4px;">${i+1}. ${escapeHtml(t.component)} – ${escapeHtml(t.task)}</div>
+            <div style="font-size: 11pt; color: #333; margin: 2px 0;">Due Date: ${escapeHtml(t.due_date)}</div>
+            <div style="font-size: 11pt; color: #333; margin: 2px 0;">Current Progress: ${t.completion}%</div>
+            <div style="font-size: 11pt; color: #333; margin: 2px 0;">Status: <strong>Critical</strong></div>
+            <div style="font-size: 11pt; color: #333; margin: 2px 0;">Balance Work: ${t.balance}%</div>
+            <div style="font-size: 11pt; color: #dc2626; font-weight: bold;">${urgencyLabel}</div>
+        </div>`;
+    });
+    return `<h1 style="font-size: 16pt; font-weight: bold; text-align: center; text-decoration: underline; margin: 0 0 10px 0; letter-spacing: 1px;">SHOW CAUSE NOTICE</h1>
+        <div style="text-align: center; font-size: 11pt; margin-bottom: 28px; color: #222;">Reference No.: ${refNo} &nbsp;|&nbsp; Date: ${dateStr}</div>
+        <div style="display: grid; grid-template-columns: 260px 1fr; gap: 12px; margin-bottom: 6px; font-size: 12pt;"><span style="font-weight: bold;">From:</span><span><strong>${escapeHtml(scheme.section_officer)}</strong>, Section Officer, ${escapeHtml(division)}</span></div>
+        <div style="display: grid; grid-template-columns: 260px 1fr; gap: 12px; margin-bottom: 6px; font-size: 12pt; align-items: start;">
+            <span style="font-weight: bold;">To:</span>
+            <span><strong>M/s ${escapeHtml(contractorName)}</strong>${contractorAddress ? `<br>${escapeHtml(contractorAddress).replace(/\n/g, '<br>')}` : ''}</span>
+        </div>
+        <div style="border-top: 1px solid #000; margin: 18px 0;"></div>
+        <div style="font-weight: bold; margin: 16px 0; font-size: 12pt;">Subject: Show Cause Notice for Delay in Execution of Works and Non-Compliance with Project Milestones under Scheme — ${escapeHtml(scheme.scheme_name)}</div>
+        <div style="display: grid; grid-template-columns: 260px 1fr; gap: 12px; margin-bottom: 6px; font-size: 12pt;"><span style="font-weight: bold;">Contract Agreement No.:</span><span>${escapeHtml(contractNo)}</span></div>
+        <div style="display: grid; grid-template-columns: 260px 1fr; gap: 12px; margin-bottom: 6px; font-size: 12pt;"><span style="font-weight: bold;">Work Name / Scheme:</span><span>${escapeHtml(scheme.scheme_name)} (${escapeHtml(scheme.scheme_id)})</span></div>
+        <div style="display: grid; grid-template-columns: 260px 1fr; gap: 12px; margin-bottom: 6px; font-size: 12pt;"><span style="font-weight: bold;">Work Order Date:</span><span>${escapeHtml(workOrderDate)}</span></div>
+        <div style="display: grid; grid-template-columns: 260px 1fr; gap: 12px; margin-bottom: 6px; font-size: 12pt;"><span style="font-weight: bold;">Scheduled Completion Date:</span><span>${escapeHtml(schedCompDate)}</span></div>
+        <div style="border-top: 1px solid #000; margin: 18px 0;"></div>
+        <p style="text-align: justify; margin: 12px 0;">Whereas, the progress of the above-mentioned work has been reviewed through the Project Monitoring System on <strong>${dateStr}</strong>, and it has been observed that the execution of works is significantly behind the approved schedule.</p>
+        <p style="font-weight: bold; margin: 18px 0 8px 0; font-size: 12pt;">The following deficiencies / triggering conditions have been recorded:</p>
+        <ol style="margin: 8px 0 8px 24px; padding: 0;"><li style="margin-bottom: 10px; font-size: 12pt;">${scheme.scnTasks.length} critical task${scheme.scnTasks.length !== 1 ? 's' : ''} ${scheme.scnTasks.length === 1 ? 'is' : 'are'} on or past due date with incomplete work</li></ol>
+        <p style="font-weight: bold; margin: 18px 0 8px 0; font-size: 12pt;">Specific task-level deficiencies identified:</p>
+        <ol style="margin: 8px 0 8px 24px; padding: 0; list-style: none;">${taskListHTML}</ol>
+        <p style="text-align: justify; margin: 12px 0;">The above progress indicates failure to achieve the agreed milestones and raises concerns regarding the contractor's capacity to complete the work within the stipulated timeline. Such delays constitute a breach of contractual obligations and may adversely affect the timely completion of the scheme.</p>
+        <p style="text-align: justify; margin: 12px 0;">You are hereby called upon to <strong>SHOW CAUSE</strong> within <strong>Seven (07) days</strong> from the date of receipt of this notice as to why:</p>
+        <ol style="margin: 8px 0 8px 24px; padding: 0;"><li style="margin-bottom: 10px; font-size: 12pt;">Action should not be initiated against your firm under the relevant clauses of the Contract Agreement.</li><li style="margin-bottom: 10px; font-size: 12pt;">Liquidated damages / penalties as provided under the contract should not be imposed.</li><li style="margin-bottom: 10px; font-size: 12pt;">Your firm should not be considered for adverse performance evaluation and other contractual remedies available to the Department.</li></ol>
+        <p style="text-align: justify; margin: 12px 0;">You are further directed to submit:</p>
+        <ol style="margin: 8px 0 8px 24px; padding: 0;"><li style="margin-bottom: 10px; font-size: 12pt;">Detailed reasons for the delays.</li><li style="margin-bottom: 10px; font-size: 12pt;">Revised activity-wise recovery plan.</li><li style="margin-bottom: 10px; font-size: 12pt;">Resource deployment plan indicating manpower, machinery and materials proposed for acceleration of the work.</li><li style="margin-bottom: 10px; font-size: 12pt;">Commitment for achieving the pending milestones within the revised schedule.</li></ol>
+        <p style="text-align: justify; margin: 12px 0;">In case no satisfactory reply is received within the stipulated period, it shall be presumed that you have no explanation to offer, and further action shall be initiated as per contract conditions without any further notice.</p>
+        <div style="margin-top: 48px; font-size: 12pt; page-break-inside: avoid;">
+            <p><strong>${escapeHtml(scheme.section_officer)}</strong></p><p>Section Officer</p><p>${escapeHtml(division)}</p><p>Date: ${dateStr}</p>
+        </div>
+        <div style="margin-top: 36px; font-size: 9.5pt; color: #555; font-style: italic; border-top: 1px solid #999; padding-top: 8px; page-break-inside: avoid;">
+            This notice is system-generated based on project progress data available in the Project Monitoring System. Reference: Scheme ${escapeHtml(scheme.scheme_id)} | Review Date: ${dateStr} | Avg. Actual Progress: ${scheme.avg_completion.toFixed(1)}%
+        </div>`;
+}
+
+function openSCNPreview() {
+    const scnScheme = state.schemes.find(s => s.scnTriggered);
+    if (!scnScheme) { showToast('Notice', 'No schemes currently trigger a Show Cause Notice.', 'info'); return; }
+    state.currentSCNScheme = scnScheme;
+    populateEditFields(); renderSCN(scnScheme);
+    document.getElementById('scnModal').classList.remove('hidden'); document.body.style.overflow = 'hidden';
+}
+
+function openSCNForScheme(schemeId) {
+    const scheme = state.schemes.find(s => s.scheme_id === schemeId);
+    if (scheme && scheme.scnTriggered) { state.currentSCNScheme = scheme; populateEditFields(); renderSCN(scheme); document.getElementById('scnModal').classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+    else showToast('Notice', 'This scheme does not currently trigger an SCN.', 'info');
+}
+
+function openSCNForCurrentScheme() {
+    if (state.currentDetailScheme) {
+        state.currentSCNScheme = state.currentDetailScheme;
+        if (!state.currentDetailScheme.scnTriggered) {
+            state.currentSCNScheme.scnTasks = state.rawData.filter(r => r.scheme_id === state.currentDetailScheme.scheme_id && r.completion < 100 && r.parsedDate).map(t => ({ component: t.component, task: t.task, due_date: t.due_date, completion: t.completion, daysRemaining: Math.ceil((t.parsedDate - state.reportDate)/(1000*60*60*24)), balance: 100 - t.completion })).filter(t => t.daysRemaining < 7);
+            if (!state.currentSCNScheme.scnTasks.length) { showToast('Notice', 'No critical tasks found.', 'info'); return; }
+            state.currentSCNScheme.scnTriggered = true;
+        }
+        populateEditFields(); renderSCN(state.currentSCNScheme);
+        document.getElementById('scnModal').classList.remove('hidden'); document.body.style.overflow = 'hidden';
+    }
+}
+
+function populateEditFields() {
+    document.getElementById('editDivision').value = state.scnDetails.divisionName;
+    document.getElementById('editContractorName').value = state.scnDetails.contractorName || (state.currentSCNScheme ? state.currentSCNScheme.contractor : '');
+    document.getElementById('editContractorAddress').value = state.scnDetails.contractorAddress;
+    document.getElementById('editContractNo').value = state.scnDetails.contractAgreementNo;
+    document.getElementById('editWorkOrderDate').value = state.scnDetails.workOrderDate;
+    document.getElementById('editSchedCompDate').value = state.scnDetails.scheduledCompletionDate;
+}
+
+function updateSCNPreview() {
+    state.scnDetails.divisionName = document.getElementById('editDivision').value.trim();
+    state.scnDetails.contractorName = document.getElementById('editContractorName').value.trim();
+    state.scnDetails.contractorAddress = document.getElementById('editContractorAddress').value.trim();
+    state.scnDetails.contractAgreementNo = document.getElementById('editContractNo').value.trim();
+    state.scnDetails.workOrderDate = document.getElementById('editWorkOrderDate').value.trim();
+    state.scnDetails.scheduledCompletionDate = document.getElementById('editSchedCompDate').value.trim();
+    if (state.currentSCNScheme) renderSCN(state.currentSCNScheme);
+}
+
+function renderSCN(scheme) { document.getElementById('scnPreview').innerHTML = generateSCNContent(scheme); }
+function closeSCNModal() { document.getElementById('scnModal').classList.add('hidden'); document.body.style.overflow = ''; }
+
+// ==========================================
+// PRINT
+// ==========================================
+function printSCN() {
+    document.body.classList.add('printing-scn');
+    document.getElementById('scnModal').offsetHeight; // force reflow
+    window.print();
+    window.onafterprint = () => document.body.classList.remove('printing-scn');
+}
+function printSchemeDetail() {
+    document.body.classList.add('printing-scheme');
+    document.getElementById('schemeDetailModal').offsetHeight; // force reflow
+    window.print();
+    window.onafterprint = () => document.body.classList.remove('printing-scheme');
+}
+function printReport() {
+    document.body.classList.add('printing-report');
+    document.getElementById('reportModal').offsetHeight; // force reflow
+    window.print();
+    window.onafterprint = () => document.body.classList.remove('printing-report');
+}
+
+function updatePrintMargins() {
+    const t = Math.max(5, Math.min(50, parseInt(document.getElementById('marginTop').value) || 20));
+    const b = Math.max(5, Math.min(50, parseInt(document.getElementById('marginBottom').value) || 20));
+    const l = Math.max(5, Math.min(50, parseInt(document.getElementById('marginLeft').value) || 20));
+    const r = Math.max(5, Math.min(50, parseInt(document.getElementById('marginRight').value) || 20));
+    document.getElementById('scnPreview').style.padding = `${t}mm ${r}mm ${b}mm ${l}mm`;
+    document.getElementById('scnPreview').style.minHeight = `${297 - t - b}mm`;
+}
+
+// ==========================================
+// REPORT GENERATION (Professional Print) – includes Section Officer‑wise summary & Scheme Completion Timeline
+// ==========================================
+function generateReportContent() {
+    const dateStr = formatDate(state.reportDate);
+    const totalSchemes = state.schemes.length;
+    const totalTasks = state.rawData.length;
+    const totalCritical = state.schemes.reduce((s,x) => s + x.critical, 0);
+    const totalUpcoming = state.schemes.reduce((s,x) => s + x.upcoming, 0);
+    const totalScheduled = state.schemes.reduce((s,x) => s + x.scheduled, 0);
+    const avgCompletion = (state.schemes.reduce((s,x) => s + x.avg_completion, 0) / (totalSchemes || 1)).toFixed(1);
+    const totalCompletedSchemes = state.schemes.filter(s => s.allTasksCompleted).length;
+
+    // Aggregation by section officer
+    const officerMap = {};
+    state.schemes.forEach(s => {
+        const off = s.section_officer || 'N/A';
+        if (!officerMap[off]) {
+            officerMap[off] = { schemes: 0, totalTasks: 0, totalCompletion: 0, critical: 0, upcoming: 0, scheduled: 0 };
+        }
+        officerMap[off].schemes++;
+        officerMap[off].totalTasks += s.tasks;
+        officerMap[off].totalCompletion += s.totalCompletion;
+        officerMap[off].critical += s.critical;
+        officerMap[off].upcoming += s.upcoming;
+        officerMap[off].scheduled += s.scheduled;
+    });
+
+    let officerRows = '';
+    for (const [officer, data] of Object.entries(officerMap)) {
+        const avg = Math.round(data.totalCompletion / data.totalTasks);
+        officerRows += `<tr>
+            <td>${escapeHtml(officer)}</td>
+            <td>${data.schemes}</td>
+            <td>${data.totalTasks}</td>
+            <td>${avg}%</td>
+            <td>${data.critical}</td>
+            <td>${data.upcoming}</td>
+            <td>${data.scheduled}</td>
+        </tr>`;
+    }
+
+    // Scheme‑wise rows sorted by officer name
+    const schemesSorted = [...state.schemes].sort((a,b) => a.section_officer.localeCompare(b.section_officer));
+    let schemeRows = '';
+    schemesSorted.forEach(s => {
+        schemeRows += `<tr>
+            <td>${escapeHtml(s.scheme_id)}</td>
+            <td>${escapeHtml(s.scheme_name)}</td>
+            <td>${escapeHtml(s.section_officer)}</td>
+            <td>${escapeHtml(s.contractor)}</td>
+            <td>${s.tasks}</td>
+            <td>${s.avg_completion}%</td>
+            <td>${s.critical}</td>
+            <td>${s.upcoming}</td>
+            <td>${s.scheduled}</td>
+            <td>${s.scnTriggered ? 'Yes' : 'No'}</td>
+        </tr>`;
+    });
+
+    // Scheme Completion Timeline – based on latest due date per scheme
+    const timelineSchemes = state.schemes
+        .filter(s => s.latestDueDate) // only schemes with at least one date
+        .map(s => ({
+            id: s.scheme_id,
+            name: s.scheme_name,
+            officer: s.section_officer,
+            finalDueDate: s.latestDueDate,
+            completion: s.avg_completion,
+            allCompleted: s.allTasksCompleted
+        }))
+        .sort((a,b) => a.finalDueDate - b.finalDueDate);
+
+    let timelineRows = '';
+    if (timelineSchemes.length) {
+        timelineSchemes.forEach(s => {
+            const status = s.allCompleted ? 'COMPLETED' : (s.completion >= 100 ? 'COMPLETED' : 'IN PROGRESS');
+            timelineRows += `<tr>
+                <td>${escapeHtml(s.id)}</td>
+                <td>${escapeHtml(s.name)}</td>
+                <td>${escapeHtml(s.officer)}</td>
+                <td>${formatDate(s.finalDueDate)}</td>
+                <td>${s.completion}%</td>
+                <td>${status}</td>
+            </tr>`;
+        });
+    } else {
+        timelineRows = '<tr><td colspan="6">No data available</td></tr>';
+    }
+
+    let criticalList = '';
+    state.schemes.filter(s => s.scnTriggered).forEach(s => {
+        s.scnTasks.forEach(t => {
+            criticalList += `<li>${escapeHtml(s.scheme_id)} – ${escapeHtml(t.component)}: ${escapeHtml(t.task)} (${t.completion}%, ${t.daysRemaining}d)</li>`;
+        });
+    });
+    if (!criticalList) criticalList = '<li>None</li>';
+
+    return `
+        <div class="report-header">
+            <h1>Jal Jeevan Mission (JJM 2.0)</h1>
+            <div class="subtitle">Abstract Progress Report</div>
+            <div class="meta">Report Date: ${dateStr} &nbsp;|&nbsp; Generated on: ${new Date().toLocaleString()}</div>
+            <div class="meta">Division: ${escapeHtml(state.scnDetails.divisionName || 'JJM Division')}</div>
+        </div>
+
+        <div class="report-section">
+            <h2>1. Executive Summary</h2>
+            <table class="summary-table">
+                <tr><td class="label">Total Schemes</td><td>${totalSchemes}</td></tr>
+                <tr><td class="label">Fully Completed Schemes</td><td>${totalCompletedSchemes}</td></tr>
+                <tr><td class="label">Total Tasks</td><td>${totalTasks}</td></tr>
+                <tr><td class="label">Critical Tasks (within 7 days)</td><td>${totalCritical}</td></tr>
+                <tr><td class="label">Upcoming Tasks (8–30 days)</td><td>${totalUpcoming}</td></tr>
+                <tr><td class="label">Scheduled Tasks (>30 days)</td><td>${totalScheduled}</td></tr>
+                <tr><td class="label">Overall Average Completion</td><td>${avgCompletion}%</td></tr>
+            </table>
+        </div>
+
+        <div class="report-section">
+            <h2>2. Section Officer‑wise Progress</h2>
+            <table class="scheme-table">
+                <thead>
+                    <tr>
+                        <th>Section Officer</th><th>Schemes</th><th>Tasks</th><th>Avg %</th>
+                        <th>Critical</th><th>Upcoming</th><th>Scheduled</th>
+                    </tr>
+                </thead>
+                <tbody>${officerRows}</tbody>
+            </table>
+        </div>
+
+        <div class="report-section">
+            <h2>3. Scheme‑wise Progress</h2>
+            <table class="scheme-table">
+                <thead>
+                    <tr>
+                        <th>Scheme ID</th><th>Name</th><th>Officer</th><th>Contractor</th>
+                        <th>Tasks</th><th>Avg %</th><th>Critical</th><th>Upcoming</th><th>Scheduled</th><th>SCN</th>
+                    </tr>
+                </thead>
+                <tbody>${schemeRows}</tbody>
+            </table>
+        </div>
+
+        <div class="report-section">
+            <h2>4. Scheme Completion Timeline</h2>
+            <table class="scheme-table">
+                <thead>
+                    <tr>
+                        <th>Scheme ID</th><th>Name</th><th>Section Officer</th><th>Final Due Date</th><th>Completion %</th><th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>${timelineRows}</tbody>
+            </table>
+        </div>
+
+        <div class="report-section">
+            <h2>5. Critical Tasks Requiring Attention</h2>
+            <ul class="critical-list">${criticalList}</ul>
+        </div>
+
+        <div class="footer">
+            <p>Generated by JJM 2.0 Monitoring System | This is a computer-generated document.</p>
+        </div>
+    `;
+}
+
+function openReportPreview() {
+    if (!state.schemes.length) { showToast('No Data', 'Please load data first.', 'error'); return; }
+    document.getElementById('reportPreview').innerHTML = generateReportContent();
+    document.getElementById('reportModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeReportModal() {
+    document.getElementById('reportModal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+// ==========================================
+// EXPORT TO CSV
+// ==========================================
+function exportToCSV() {
+    if (state.schemes.length === 0) {
+        showToast('No Data', 'Nothing to export.', 'error');
+        return;
+    }
+
+    const headers = ['Scheme ID','Scheme Name','Section Officer','Contractor','Tasks','Avg. Completion','Critical','Upcoming','Scheduled','SCN Triggered'];
+    const rows = [headers.join(',')];
+
+    state.schemes.forEach(s => {
+        rows.push([
+            s.scheme_id,
+            `"${s.scheme_name.replace(/"/g, '""')}"`,
+            `"${s.section_officer.replace(/"/g, '""')}"`,
+            `"${s.contractor.replace(/"/g, '""')}"`,
+            s.tasks,
+            s.avg_completion + '%',
+            s.critical,
+            s.upcoming,
+            s.scheduled,
+            s.scnTriggered ? 'Yes' : 'No'
+        ].join(','));
+    });
+
+    const csvContent = rows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `schemes_report_${formatDateISO(state.reportDate)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+// ==========================================
+// PAGINATION, SORTING, FILTERS, TABLE
+// ==========================================
+function toggleFilters() { const p = document.getElementById('filterPanel'); p.style.display = p.style.display === 'none' ? 'flex' : 'none'; }
+
+function populateFilters() {
+    const officers = [...new Set(state.rawData.map(r => r.section_officer).filter(Boolean))].sort();
+    const contractors = [...new Set(state.rawData.map(r => r.contractor).filter(Boolean))].sort();
+    const components = [...new Set(state.rawData.map(r => r.component).filter(Boolean))].sort();
+    populateSelect('filterOfficer', officers); populateSelect('filterContractor', contractors); populateSelect('filterComponent', components);
+}
+function populateSelect(id, options) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = `<option value="">All</option>`;
+    options.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o; sel.appendChild(opt); });
+}
+function applyFilters() {
+    state.filters.officer = document.getElementById('filterOfficer').value;
+    state.filters.contractor = document.getElementById('filterContractor').value;
+    state.filters.component = document.getElementById('filterComponent').value;
+    state.filters.search = document.getElementById('globalSearch').value.toLowerCase();
+    state.filtered = state.schemes.filter(s => {
+        const m = !state.filters.search || s.scheme_id.toLowerCase().includes(state.filters.search) || s.scheme_name.toLowerCase().includes(state.filters.search) || s.contractor.toLowerCase().includes(state.filters.search);
+        const mo = !state.filters.officer || s.section_officer === state.filters.officer;
+        const mc = !state.filters.contractor || s.contractor === state.filters.contractor;
+        const mcomp = !state.filters.component || state.rawData.some(r => r.scheme_id === s.scheme_id && r.component === state.filters.component);
+        return m && mo && mc && mcomp;
+    });
+    state.filtered = getSortedSchemes(state.filtered);
+    state.currentPage = 1;
+    updateStats(); renderTable();
+}
+function clearFilters() {
+    document.getElementById('globalSearch').value = '';
+    document.getElementById('filterOfficer').value = '';
+    document.getElementById('filterContractor').value = '';
+    document.getElementById('filterComponent').value = '';
+    state.filters = { search: '', officer: '', contractor: '', component: '' };
+    applyFilters();
+}
+function updateStats() {
+    document.getElementById('statSchemes').textContent = state.filtered.length;
+    const totalTasks = state.filtered.reduce((s,x) => s + x.tasks, 0);
+    document.getElementById('statTasks').textContent = `${totalTasks} task${totalTasks!==1?'s':''} across all`;
+    document.getElementById('statCritical').textContent = state.filtered.reduce((s,x) => s + x.critical, 0);
+    document.getElementById('statUpcoming').textContent = state.filtered.reduce((s,x) => s + x.upcoming, 0);
+    document.getElementById('statScheduled').textContent = state.filtered.reduce((s,x) => s + x.scheduled, 0);
+    document.getElementById('statCompletedSchemes').textContent = state.filtered.filter(s => s.allTasksCompleted).length;
+}
+
+function sortBy(column) {
+    if (state.sortColumn === column) state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+    else { state.sortColumn = column; state.sortDirection = 'asc'; }
+    updateSortIcons();
+    applyFilters();
+}
+function updateSortIcons() {
+    document.querySelectorAll('.sort-icon').forEach(icon => { icon.classList.remove('active','fa-sort-up','fa-sort-down'); icon.classList.add('fa-sort'); });
+    if (state.sortColumn) {
+        const icon = document.getElementById(`sort-icon-${state.sortColumn}`);
+        if (icon) { icon.classList.add('active'); icon.classList.remove('fa-sort'); icon.classList.add(state.sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'); }
+    }
+}
+function getSortedSchemes(array) {
+    if (!state.sortColumn) return array;
+    const col = state.sortColumn;
+    const dir = state.sortDirection === 'asc' ? 1 : -1;
+    return [...array].sort((a,b) => {
+        let va = a[col], vb = b[col];
+        if (['tasks','avg_completion','critical','upcoming','scheduled'].includes(col)) return (va - vb) * dir;
+        va = (va||'').toString().toLowerCase(); vb = (vb||'').toString().toLowerCase();
+        return va < vb ? -1*dir : va > vb ? 1*dir : 0;
+    });
+}
+function changePageSize() {
+    const val = document.getElementById('pageSizeSelect').value;
+    state.pageSize = val === 'all' ? 'all' : parseInt(val);
+    state.currentPage = 1;
+    sessionStorage.setItem('jjm_page_size', val);
+    renderTable();
+}
+function goToPage(page) { state.currentPage = page; renderTable(); }
+function renderPagination(totalItems) {
+    const container = document.getElementById('paginationButtons');
+    const info = document.getElementById('paginationInfo');
+    if (state.pageSize === 'all' || totalItems <= state.pageSize) {
+        container.innerHTML = '';
+        info.textContent = `Showing all ${totalItems} entries`;
+        return;
+    }
+    const totalPages = Math.ceil(totalItems / state.pageSize);
+    const current = state.currentPage;
+    const start = (current-1) * state.pageSize + 1;
+    const end = Math.min(current * state.pageSize, totalItems);
+    info.textContent = `Showing ${start} to ${end} of ${totalItems} entries`;
+    let html = `<button onclick="goToPage(${current-1})" ${current===1?'disabled':''} class="px-3 py-1 text-sm border rounded ${current===1?'bg-gray-100 text-gray-400 cursor-not-allowed':'bg-white hover:bg-gray-50 text-gray-700'}"><i class="fas fa-chevron-left"></i></button>`;
+    for (let i=1; i<=totalPages; i++) html += `<button onclick="goToPage(${i})" class="px-3 py-1 text-sm border rounded ${i===current?'bg-blue-600 text-white':'bg-white hover:bg-gray-50 text-gray-700'}">${i}</button>`;
+    html += `<button onclick="goToPage(${current+1})" ${current===totalPages?'disabled':''} class="px-3 py-1 text-sm border rounded ${current===totalPages?'bg-gray-100 text-gray-400 cursor-not-allowed':'bg-white hover:bg-gray-50 text-gray-700'}"><i class="fas fa-chevron-right"></i></button>`;
+    container.innerHTML = html;
+}
+function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+    if (state.filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" class="px-4 py-12 text-center text-gray-500"><i class="fas fa-search text-2xl mb-2 block text-gray-300"></i>No schemes match your filters.</td></tr>`;
+        renderPagination(0);
+        return;
+    }
+    let schemesToRender = state.filtered;
+    const totalCount = schemesToRender.length;
+    if (state.pageSize !== 'all') {
+        const start = (state.currentPage - 1) * state.pageSize;
+        schemesToRender = schemesToRender.slice(start, start + state.pageSize);
+    }
+    schemesToRender.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50 transition-colors';
+        let progColor = s.avg_completion < 30 ? 'bg-red-500' : s.avg_completion < 70 ? 'bg-orange-500' : 'bg-blue-600';
+        tr.innerHTML = `
+            <td class="px-4 py-3 text-sm font-bold text-gray-900">${s.scnTriggered ? '<span class="inline-block w-2 h-2 bg-red-500 rounded-full mr-1.5 align-middle"></span>' : ''}${escapeHtml(s.scheme_id)}</td>
+            <td class="px-4 py-3 text-sm text-gray-700 font-medium">${escapeHtml(s.scheme_name)}</td>
+            <td class="px-4 py-3 text-sm text-gray-600">${escapeHtml(s.section_officer)}</td>
+            <td class="px-4 py-3 text-sm text-gray-600">${escapeHtml(s.contractor)}</td>
+            <td class="px-4 py-3 text-sm text-center font-bold text-gray-800">${s.tasks}</td>
+            <td class="px-4 py-3 text-sm"><div class="flex items-center justify-center gap-2"><div class="w-16 bg-gray-200 rounded-full h-2"><div class="${progColor} h-2 rounded-full" style="width:${s.avg_completion}%"></div></div><span class="text-xs font-bold text-gray-700">${s.avg_completion}%</span></div></td>
+            <td class="px-4 py-3 text-center">${s.critical > 0 ? `<span class="px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">${s.critical}</span>` : '<span class="text-gray-300">—</span>'}</td>
+            <td class="px-4 py-3 text-center">${s.upcoming > 0 ? `<span class="px-2 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800">${s.upcoming}</span>` : '<span class="text-gray-300">—</span>'}</td>
+            <td class="px-4 py-3 text-center"><span class="px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800">${s.scheduled}</span></td>
+            <td class="px-4 py-3 text-center">${s.scnTriggered ? `<button onclick="openSCNForScheme('${s.scheme_id}')" class="px-3 py-1.5 text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors">Issue</button>` : '<span class="text-gray-300">—</span>'}</td>
+            <td class="px-4 py-3 text-center"><button onclick="viewScheme('${s.scheme_id}')" class="px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors">View</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+    renderPagination(totalCount);
+    updateSortIcons();
+}
+
+// ==========================================
+// UTILITIES
+// ==========================================
+function escapeHtml(text) { if (!text) return 'N/A'; const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+
+function showToast(title, message, type = 'success') {
+    const toast = document.getElementById('toast');
+    const content = document.getElementById('toastContent');
+    const icon = document.getElementById('toastIcon');
+    document.getElementById('toastTitle').textContent = title;
+    document.getElementById('toastMessage').textContent = message;
+    content.className = 'bg-white border-l-4 shadow-xl rounded-lg p-4 flex items-center gap-3 min-w-[300px]';
+    if (type === 'success') { content.classList.add('border-green-500'); icon.className = 'fas fa-check-circle text-green-500 text-xl'; }
+    else if (type === 'error') { content.classList.add('border-red-500'); icon.className = 'fas fa-exclamation-circle text-red-500 text-xl'; }
+    else { content.classList.add('border-blue-500'); icon.className = 'fas fa-info-circle text-blue-500 text-xl'; }
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
+    setTimeout(() => { toast.classList.add('translate-y-10', 'opacity-0'); setTimeout(() => toast.classList.add('hidden'), 300); }, 4000);
+}
+</script>
+</body>
+</html>
