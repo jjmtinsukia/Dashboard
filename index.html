@@ -7,7 +7,11 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style id="print-page-style">
+    /* Dynamic print page size rules will be inserted here */
+</style>
 <style>
     /* ===== LOGIN OVERLAY ===== */
     .login-overlay {
@@ -53,6 +57,7 @@
 
         .modal-backdrop { display: none !important; }
 
+        /* SCN Print */
         body.printing-scn #scnModal {
             display: block !important; position: static !important; background: white !important;
             overflow: visible !important; width: 100% !important; max-width: 100% !important;
@@ -68,13 +73,37 @@
             overflow: visible !important;
         }
         body.printing-scn #scnPreview {
-            box-shadow: none !important; padding: 12mm !important; margin: 0 auto !important;
+            box-shadow: none !important; margin: 0 auto !important;
             width: auto !important; min-height: auto !important;
             font-family: 'Times New Roman', Times, serif !important;
             font-size: 12pt !important; color: black !important;
         }
-        body.printing-scn #schemeDetailModal, body.printing-scn #reportModal { display: none !important; }
+        body.printing-scn #schemeDetailModal, body.printing-scn #reportModal, body.printing-scn #wrnModal { display: none !important; }
 
+        /* WRN Print */
+        body.printing-wrn #wrnModal {
+            display: block !important; position: static !important; background: white !important;
+            overflow: visible !important; width: 100% !important; max-width: 100% !important;
+            box-shadow: none !important; border: none !important; margin: 0 !important;
+            padding: 0 !important; border-radius: 0 !important;
+        }
+        body.printing-wrn #wrnModal > div {
+            box-shadow: none !important; border: none !important; max-width: 100% !important;
+            margin: 0 !important; border-radius: 0 !important;
+        }
+        body.printing-wrn .wrn-preview-wrapper {
+            background: white !important; padding: 0 !important; max-height: none !important;
+            overflow: visible !important;
+        }
+        body.printing-wrn #wrnPreview {
+            box-shadow: none !important; margin: 0 auto !important;
+            width: auto !important; min-height: auto !important;
+            font-family: 'Times New Roman', Times, serif !important;
+            font-size: 12pt !important; color: black !important;
+        }
+        body.printing-wrn #scnModal, body.printing-wrn #schemeDetailModal, body.printing-wrn #reportModal { display: none !important; }
+
+        /* Scheme Detail Print */
         body.printing-scheme #schemeDetailModal {
             display: block !important; position: static !important; background: white !important;
             overflow: visible !important; width: 100% !important; max-width: 100% !important;
@@ -86,13 +115,37 @@
             margin: 0 !important; padding: 0 !important; border-radius: 0 !important;
         }
         body.printing-scheme #schemeDetailContent {
-            padding: 10mm !important; font-family: 'Times New Roman', Times, serif !important;
+            font-family: 'Times New Roman', Times, serif !important;
             font-size: 11pt; line-height: 1.4;
         }
         body.printing-scheme .print-only { display: block !important; }
         body.printing-scheme .screen-only { display: none !important; }
-        body.printing-scheme #scnModal, body.printing-scheme #reportModal { display: none !important; }
+        body.printing-scheme #scnModal, body.printing-scheme #reportModal, body.printing-scheme #wrnModal { display: none !important; }
 
+        /* Abstract Report Print */
+        body.printing-report #reportModal {
+            display: block !important; position: static !important; background: white !important;
+            overflow: visible !important; width: 100% !important; max-width: 100% !important;
+            box-shadow: none !important; border: none !important; margin: 0 !important;
+            padding: 0 !important; border-radius: 0 !important;
+        }
+        body.printing-report #reportModal > div {
+            box-shadow: none !important; border: none !important; max-width: 100% !important;
+            margin: 0 !important; padding: 0 !important; border-radius: 0 !important;
+        }
+        body.printing-report .report-preview-wrapper {
+            background: white !important; padding: 0 !important; max-height: none !important;
+            overflow: visible !important;
+        }
+        body.printing-report #reportPreview {
+            box-shadow: none !important; margin: 0 auto !important;
+            width: auto !important; min-height: auto !important;
+            font-family: 'Times New Roman', Times, serif !important;
+            font-size: 12pt !important; color: black !important; line-height: 1.4;
+        }
+
+        /* Ensure ordered lists display numbers in print */
+        ol { list-style-type: decimal !important; }
         .print-header { text-align: center; margin-bottom: 8mm; border-bottom: 2px solid black; padding-bottom: 3mm; }
         .print-header h1 { font-size: 18pt; font-weight: bold; margin: 0 0 2mm 0; letter-spacing: 1px; }
         .print-header .subtitle { font-size: 14pt; font-weight: bold; margin: 0 0 1mm 0; }
@@ -118,27 +171,6 @@
         .signature-box { width: 45%; text-align: center; }
         .signature-line { border-top: 1px solid black; margin-top: 15mm; margin-bottom: 2mm; }
 
-        body.printing-report #reportModal {
-            display: block !important; position: static !important; background: white !important;
-            overflow: visible !important; width: 100% !important; max-width: 100% !important;
-            box-shadow: none !important; border: none !important; margin: 0 !important;
-            padding: 0 !important; border-radius: 0 !important;
-        }
-        body.printing-report #reportModal > div {
-            box-shadow: none !important; border: none !important; max-width: 100% !important;
-            margin: 0 !important; padding: 0 !important; border-radius: 0 !important;
-        }
-        body.printing-report .report-preview-wrapper {
-            background: white !important; padding: 0 !important; max-height: none !important;
-            overflow: visible !important;
-        }
-        body.printing-report #reportPreview {
-            box-shadow: none !important; padding: 15mm 15mm 20mm 15mm !important;
-            margin: 0 auto !important; width: auto !important; min-height: auto !important;
-            font-family: 'Times New Roman', Times, serif !important;
-            font-size: 12pt !important; color: black !important; line-height: 1.4;
-        }
-
         .report-header { text-align: center; margin-bottom: 8mm; border-bottom: 3px double #000; padding-bottom: 4mm; }
         .report-header h1 { font-size: 20pt; font-weight: bold; margin: 0 0 3mm 0; letter-spacing: 2px; }
         .report-header .subtitle { font-size: 16pt; font-weight: bold; margin: 0 0 2mm 0; }
@@ -159,20 +191,6 @@
         .critical-list { font-size: 11pt; margin: 0 0 5mm 0; padding-left: 15mm; }
 
         .footer { margin-top: 12mm; border-top: 1px solid #999; padding-top: 3mm; text-align: center; font-size: 10pt; color: #555; }
-
-        @page {
-            size: A4 portrait;
-            margin: 12mm 15mm 25mm 15mm;
-            @bottom-center {
-                content: "Page " counter(page) " of " counter(pages);
-                font-family: 'Times New Roman', Times, serif;
-                font-size: 9pt; color: #555;
-            }
-        }
-
-        .report-section { page-break-inside: avoid; }
-        .scheme-table { page-break-inside: auto; }
-        .scheme-table tr { page-break-inside: avoid; }
     }
 
     .modal-backdrop { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(3px); }
@@ -227,13 +245,15 @@
                 <p class="text-xs text-gray-400 uppercase font-semibold tracking-wide">Report date</p>
                 <p class="text-sm font-bold text-gray-700" id="headerDate">-</p>
             </div>
-            <button onclick="openSCNPreview()" id="btnShowCause" class="px-4 py-2 text-sm border border-red-600 text-red-600 rounded-lg hover:bg-red-50 font-medium transition-colors" style="display:none;">
-                <i class="fas fa-gavel mr-1"></i> Show Cause Notice
+            <!-- Export Abstract Report -->
+            <button onclick="exportAbstractReportXLSX()" class="px-4 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium transition-colors flex items-center shadow-sm">
+                <i class="fas fa-file-excel mr-2"></i> <span class="hidden sm:inline">Export Abstract Report</span>
             </button>
+            <!-- Print Report -->
             <button onclick="openReportPreview()" class="px-4 py-2 text-sm bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium transition-colors flex items-center">
                 <i class="fas fa-print mr-2"></i> Print report
             </button>
-            <!-- ===== POPPING BUTTON: Create Schematic Timelines ===== -->
+            <!-- Schematic Timelines -->
             <a href="https://script.google.com/macros/s/AKfycbzYzt27hHJGkEZkb7UPUpTkZc4shN0eKLX1JPslZupjTJOGvOWK-eprmnyVIzjMroeL/exec" target="_blank" class="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-all flex items-center shadow-lg btn-popping">
                 <i class="fas fa-diagram-project mr-2"></i> <span class="hidden sm:inline">Create Schematic Timelines</span>
             </a>
@@ -242,7 +262,6 @@
 </header>
 
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-
     <!-- SCN Alert Banner -->
     <section id="scnAlertBanner" class="bg-red-50 border border-red-200 rounded-xl p-4 no-print" style="display:none;">
         <div class="flex items-start gap-3">
@@ -250,6 +269,9 @@
             <div class="flex-1">
                 <h3 class="text-red-800 font-bold text-base">Show Cause Notice Triggered</h3>
                 <ul id="scnAlertList" class="text-red-700 text-sm mt-1 list-disc list-inside"></ul>
+                <button onclick="openSCNPreview()" class="mt-3 px-4 py-2 bg-red-700 text-white text-sm font-semibold rounded-lg hover:bg-red-800 transition-colors shadow-sm">
+                    <i class="fas fa-file-alt mr-1"></i> Preview & Issue Notice
+                </button>
             </div>
         </div>
     </section>
@@ -414,6 +436,9 @@
                     <button onclick="openSCNForCurrentScheme()" class="px-4 py-2 text-sm border border-red-600 text-red-600 rounded-lg hover:bg-red-50 font-medium">
                         <i class="fas fa-gavel mr-1"></i> Generate SCN
                     </button>
+                    <button onclick="openWRNPreview(state.currentDetailSchemeId)" class="px-4 py-2 text-sm border border-amber-600 text-amber-600 rounded-lg hover:bg-amber-50 font-medium">
+                        <i class="fas fa-hammer mr-1"></i> Generate WRN
+                    </button>
                     <button onclick="closeSchemeDetail()" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Close</button>
                     <button onclick="printSchemeDetail()" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm">
                         <i class="fas fa-print mr-1"></i> Print
@@ -456,14 +481,71 @@
             </div>
             <div class="p-3 bg-gray-100 border-b border-gray-200 no-print flex flex-wrap gap-4 items-center text-xs">
                 <span class="font-bold text-gray-700 flex items-center gap-1"><i class="fas fa-ruler-combined"></i> Print Margins:</span>
-                <label class="flex items-center gap-1">Top: <input type="number" id="marginTop" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins()"> mm</label>
-                <label class="flex items-center gap-1">Bottom: <input type="number" id="marginBottom" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins()"> mm</label>
-                <label class="flex items-center gap-1">Left: <input type="number" id="marginLeft" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins()"> mm</label>
-                <label class="flex items-center gap-1">Right: <input type="number" id="marginRight" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins()"> mm</label>
-                <span class="text-gray-500 ml-auto font-medium">A4 Portrait</span>
+                <label class="flex items-center gap-1">Top: <input type="number" id="marginTop" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins('scn')"> mm</label>
+                <label class="flex items-center gap-1">Bottom: <input type="number" id="marginBottom" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins('scn')"> mm</label>
+                <label class="flex items-center gap-1">Left: <input type="number" id="marginLeft" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins('scn')"> mm</label>
+                <label class="flex items-center gap-1">Right: <input type="number" id="marginRight" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins('scn')"> mm</label>
+                <select id="scnPaperSize" onchange="updatePrintMargins('scn')" class="border border-gray-300 rounded px-2 py-1 text-xs">
+                    <option value="A4">A4</option>
+                    <option value="Legal">Legal</option>
+                </select>
+                <span class="text-gray-500 ml-auto font-medium">Paper Size</span>
             </div>
             <div class="scn-preview-wrapper p-8 bg-gray-200" style="max-height: calc(100vh - 220px); overflow-y: auto;">
                 <div id="scnPreview" class="bg-white shadow-lg mx-auto" style="width: 210mm; min-height: 297mm; padding: 20mm; box-sizing: border-box; font-family: 'Times New Roman', Times, serif; color: #1a1a1a; line-height: 1.6; font-size: 12pt;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- WRN Modal -->
+<div id="wrnModal" class="fixed inset-0 z-50 hidden modal-backdrop overflow-y-auto">
+    <div class="min-h-screen flex items-start justify-center p-4 py-6">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl relative my-4">
+            <div class="flex justify-between items-center p-4 border-b border-gray-200 no-print sticky top-0 bg-white z-10 rounded-t-xl">
+                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                    <i class="fas fa-hammer text-amber-600"></i> Work Resumption Notice — Preview
+                </h2>
+                <div class="flex gap-2">
+                    <button onclick="closeWRNModal()" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Close</button>
+                    <button onclick="printWRN()" class="px-4 py-2 text-sm bg-amber-700 text-white rounded-lg hover:bg-amber-800 font-semibold shadow-sm">
+                        <i class="fas fa-print mr-1"></i> Print / PDF
+                    </button>
+                </div>
+            </div>
+            <div class="p-4 bg-amber-50 border-b border-amber-100 no-print">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-xs font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1"><i class="fas fa-edit"></i> Editable Notice Details</h3>
+                    <span class="text-[10px] text-amber-600 font-medium bg-amber-100 px-2 py-0.5 rounded-full">LIVE PREVIEW</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div><label class="block text-[10px] font-bold text-amber-800 mb-1 uppercase">Ref. No.</label><input type="text" id="wrnRefNo" placeholder="e.g., WRN/2026/001" class="w-full px-3 py-2 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white" oninput="updateWRNPreview()"></div>
+                    <div><label class="block text-[10px] font-bold text-amber-800 mb-1 uppercase">File No.</label><input type="text" id="wrnFileNo" placeholder="e.g., TIN/2026/123" class="w-full px-3 py-2 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white" oninput="updateWRNPreview()"></div>
+                    <div><label class="block text-[10px] font-bold text-amber-800 mb-1 uppercase">Date</label><input type="text" id="wrnDate" placeholder="e.g., 20 Jun 2026" class="w-full px-3 py-2 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white" oninput="updateWRNPreview()"></div>
+                    <div><label class="block text-[10px] font-bold text-amber-800 mb-1 uppercase">Contractor Name</label><input type="text" id="wrnContractorName" placeholder="Contractor Name" class="w-full px-3 py-2 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white" oninput="updateWRNPreview()"></div>
+                    <div><label class="block text-[10px] font-bold text-amber-800 mb-1 uppercase">BID ID</label><input type="text" id="wrnBidId" placeholder="BID ID" class="w-full px-3 py-2 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white" oninput="updateWRNPreview()"></div>
+                    <div class="md:col-span-3"><label class="block text-[10px] font-bold text-amber-800 mb-1 uppercase">Contractor Address</label><textarea id="wrnContractorAddress" rows="2" placeholder="Full address" class="w-full px-3 py-2 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white resize-none" oninput="updateWRNPreview()"></textarea></div>
+                    <div><label class="block text-[10px] font-bold text-amber-800 mb-1 uppercase">Contact</label><input type="text" id="wrnContact" placeholder="Phone / Email" class="w-full px-3 py-2 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white" oninput="updateWRNPreview()"></div>
+                    <div><label class="block text-[10px] font-bold text-amber-800 mb-1 uppercase">Division / Office Name</label><input type="text" id="wrnDivision" placeholder="e.g., Tinsukia Division" class="w-full px-3 py-2 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white" oninput="updateWRNPreview()"></div>
+                    <div><label class="block text-[10px] font-bold text-amber-800 mb-1 uppercase">Sub‑Division</label><input type="text" id="wrnSubDivision" placeholder="e.g., Titabor Sub‑Division" class="w-full px-3 py-2 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white" oninput="updateWRNPreview()"></div>
+                    <div><label class="block text-[10px] font-bold text-amber-800 mb-1 uppercase">Duration of Standstill</label><input type="text" id="wrnDuration" placeholder="e.g., 3 months" class="w-full px-3 py-2 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white" oninput="updateWRNPreview()"></div>
+                    <div><label class="block text-[10px] font-bold text-amber-800 mb-1 uppercase">Undertaking Submission Date</label><input type="text" id="wrnUndertakingDate" placeholder="e.g., 20 Jun 2026" class="w-full px-3 py-2 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white" oninput="updateWRNPreview()"></div>
+                </div>
+            </div>
+            <div class="p-3 bg-gray-100 border-b border-gray-200 no-print flex flex-wrap gap-4 items-center text-xs">
+                <span class="font-bold text-gray-700 flex items-center gap-1"><i class="fas fa-ruler-combined"></i> Print Margins:</span>
+                <label class="flex items-center gap-1">Top: <input type="number" id="wrnMarginTop" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins('wrn')"> mm</label>
+                <label class="flex items-center gap-1">Bottom: <input type="number" id="wrnMarginBottom" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins('wrn')"> mm</label>
+                <label class="flex items-center gap-1">Left: <input type="number" id="wrnMarginLeft" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins('wrn')"> mm</label>
+                <label class="flex items-center gap-1">Right: <input type="number" id="wrnMarginRight" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins('wrn')"> mm</label>
+                <select id="wrnPaperSize" onchange="updatePrintMargins('wrn')" class="border border-gray-300 rounded px-2 py-1 text-xs">
+                    <option value="A4">A4</option>
+                    <option value="Legal">Legal</option>
+                </select>
+                <span class="text-gray-500 ml-auto font-medium">Paper Size</span>
+            </div>
+            <div class="wrn-preview-wrapper p-8 bg-gray-200" style="max-height: calc(100vh - 220px); overflow-y: auto;">
+                <div id="wrnPreview" class="bg-white shadow-lg mx-auto" style="width: 210mm; min-height: 297mm; padding: 20mm; box-sizing: border-box; font-family: 'Times New Roman', Times, serif; color: #1a1a1a; line-height: 1.6; font-size: 12pt;"></div>
             </div>
         </div>
     </div>
@@ -483,6 +565,18 @@
                         <i class="fas fa-print mr-1"></i> Print / PDF
                     </button>
                 </div>
+            </div>
+            <div class="p-3 bg-gray-100 border-b border-gray-200 no-print flex flex-wrap gap-4 items-center text-xs">
+                <span class="font-bold text-gray-700 flex items-center gap-1"><i class="fas fa-ruler-combined"></i> Print Margins:</span>
+                <label class="flex items-center gap-1">Top: <input type="number" id="reportMarginTop" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins('report')"> mm</label>
+                <label class="flex items-center gap-1">Bottom: <input type="number" id="reportMarginBottom" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins('report')"> mm</label>
+                <label class="flex items-center gap-1">Left: <input type="number" id="reportMarginLeft" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins('report')"> mm</label>
+                <label class="flex items-center gap-1">Right: <input type="number" id="reportMarginRight" value="20" min="5" max="50" class="w-12 border border-gray-300 rounded px-1.5 py-1 text-center font-mono" onchange="updatePrintMargins('report')"> mm</label>
+                <select id="reportPaperSize" onchange="updatePrintMargins('report')" class="border border-gray-300 rounded px-2 py-1 text-xs">
+                    <option value="A4">A4</option>
+                    <option value="Legal">Legal</option>
+                </select>
+                <span class="text-gray-500 ml-auto font-medium">Paper Size</span>
             </div>
             <div class="report-preview-wrapper p-8 bg-gray-200" style="max-height: calc(100vh - 220px); overflow-y: auto;">
                 <div id="reportPreview" class="bg-white shadow-lg mx-auto" style="width: 210mm; min-height: 297mm; padding: 20mm; box-sizing: border-box; font-family: 'Times New Roman', Times, serif; color: #1a1a1a; line-height: 1.6; font-size: 12pt;"></div>
@@ -505,6 +599,7 @@
 // ==========================================
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxjUD-eB003X0yhD0wmtMsiwm2rHmEER8hGZi7EcZdJc2xMOTg0WGZiJPN0rmuJ9f8n/exec";
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZnZvA5Z9rKm18OYDe008BRBVLTzifwam0qkcnm0L1n4ejcQgEoiPCel4TqQvDn2cE3xvV68G2psBi/pub?gid=1896948484&single=true&output=csv";
+const CONTRACTOR_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZnZvA5Z9rKm18OYDe008BRBVLTzifwam0qkcnm0L1n4ejcQgEoiPCel4TqQvDn2cE3xvV68G2psBi/pub?gid=1480283757&single=true&output=csv";
 
 // ==========================================
 // STATE
@@ -522,7 +617,9 @@ const state = {
     pageSize: 5,
     sortColumn: null,
     sortDirection: 'asc',
-    originalCompletion: {}
+    originalCompletion: {},
+    contractorMap: {},
+    currentWRNScheme: null
 };
 
 // ==========================================
@@ -564,7 +661,11 @@ function initDashboard() {
         document.getElementById('pageSizeSelect').value = savedPageSize;
     }
     loadGoogleSheet();
+    loadContractorData();
     setInterval(loadGoogleSheet, 120000);
+    updatePrintMargins('scn');
+    updatePrintMargins('wrn');
+    updatePrintMargins('report');
 }
 
 // ==========================================
@@ -588,6 +689,40 @@ async function loadGoogleSheet() {
     } catch(error) {
         console.error("Google Sheet fetch failed", error);
         showToast('Refresh Failed', 'Could not load latest data.', 'error');
+    }
+}
+
+async function loadContractorData() {
+    try {
+        const resp = await fetch(CONTRACTOR_SHEET_URL + "&t=" + Date.now());
+        const csvText = await resp.text();
+        Papa.parse(csvText, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                if (results.errors.length) {
+                    console.warn('Contractor CSV errors:', results.errors);
+                    return;
+                }
+                const map = {};
+                results.data.forEach(row => {
+                    const contractor = (row['Contractor'] || '').trim();
+                    if (!contractor) return;
+                    if (!map[contractor]) {
+                        map[contractor] = {
+                            bidId: row['BID ID'] || '',
+                            address: row['Contractor_add'] || '',
+                            contact: row['Contractor_contact'] || '',
+                            subDivision: row['Sub Division'] || '',
+                            sectionOfficer: row['Section Officer'] || ''
+                        };
+                    }
+                });
+                state.contractorMap = map;
+            }
+        });
+    } catch(err) {
+        console.warn('Failed to load contractor data', err);
     }
 }
 
@@ -648,7 +783,6 @@ function aggregateSchemes() {
         else if (days !== null && days >= 7 && days <= 30) grouped[id].upcoming++;
         else grouped[id].scheduled++;
 
-        // Track latest due date for the scheme
         if (row.parsedDate) {
             if (!grouped[id].latestDueDate || row.parsedDate > grouped[id].latestDueDate) {
                 grouped[id].latestDueDate = row.parsedDate;
@@ -674,7 +808,6 @@ function checkSCNTriggers() {
     });
     document.getElementById('scnAlertBanner').style.display = totalSCN > 0 ? 'block' : 'none';
     document.getElementById('scnAlertList').innerHTML = totalSCN > 0 ? `<li>${totalCriticalTasks} critical task${totalCriticalTasks!==1?'s':''} across ${totalSCN} scheme${totalSCN!==1?'s':''}</li>` : '';
-    document.getElementById('btnShowCause').style.display = totalSCN > 0 ? 'inline-flex' : 'none';
 }
 
 // ==========================================
@@ -1072,38 +1205,190 @@ function renderSCN(scheme) { document.getElementById('scnPreview').innerHTML = g
 function closeSCNModal() { document.getElementById('scnModal').classList.add('hidden'); document.body.style.overflow = ''; }
 
 // ==========================================
-// PRINT
+// WRN (Work Resumption Notice)
+// ==========================================
+function openWRNPreview(schemeId) {
+    const scheme = state.schemes.find(s => s.scheme_id === schemeId);
+    if (!scheme) return;
+    state.currentWRNScheme = scheme;
+    const cd = state.contractorMap[scheme.contractor] || {};
+
+    document.getElementById('wrnRefNo').value = `WRN/${scheme.scheme_id}/${formatDateISO(state.reportDate)}`;
+    document.getElementById('wrnFileNo').value = '';
+    document.getElementById('wrnDate').value = formatDate(state.reportDate);
+    document.getElementById('wrnContractorName').value = scheme.contractor || '';
+    document.getElementById('wrnBidId').value = cd.bidId || '';
+    document.getElementById('wrnContractorAddress').value = cd.address || '';
+    document.getElementById('wrnContact').value = cd.contact || '';
+    document.getElementById('wrnDivision').value = state.scnDetails.divisionName || 'Tinsukia Division';
+    document.getElementById('wrnSubDivision').value = cd.subDivision || '';
+    document.getElementById('wrnDuration').value = '';
+    document.getElementById('wrnUndertakingDate').value = '';
+
+    updateWRNPreview();
+    document.getElementById('wrnModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeWRNModal() {
+    document.getElementById('wrnModal').classList.add('hidden');
+    document.body.style.overflow = '';
+    state.currentWRNScheme = null;
+}
+
+function updateWRNPreview() {
+    if (!state.currentWRNScheme) return;
+    const scheme = state.currentWRNScheme;
+    const refNo = document.getElementById('wrnRefNo').value;
+    const fileNo = document.getElementById('wrnFileNo').value;
+    const wrnDate = document.getElementById('wrnDate').value;
+    const contractorName = document.getElementById('wrnContractorName').value;
+    const contractorAddress = document.getElementById('wrnContractorAddress').value;
+    const bidId = document.getElementById('wrnBidId').value;
+    const contact = document.getElementById('wrnContact').value;
+    const division = document.getElementById('wrnDivision').value;
+    const subDivision = document.getElementById('wrnSubDivision').value;
+    const duration = document.getElementById('wrnDuration').value;
+    const undertakingDate = document.getElementById('wrnUndertakingDate').value;
+
+    const content = `
+        <div style="font-family: 'Times New Roman', Times, serif; line-height: 1.6; font-size: 12pt;">
+            <!-- Government Header -->
+            <div style="text-align: center; margin-bottom: 4mm;">
+                <div style="font-weight: bold; font-size: 14pt;">GOVERNMENT OF ASSAM</div>
+                <div style="font-weight: bold; font-size: 13pt;">OFFICE OF THE EXECUTIVE ENGINEER (PHE) TINSUKIA DIVISION,</div>
+                <div style="font-weight: bold;">TINSUKIA</div>
+            </div>
+            <div style="border-top: 2px solid #000; margin: 3mm 0;"></div>
+            <div style="display: flex; justify-content: space-between; font-size: 11pt; margin-bottom: 4mm;">
+                <span>File No: ${escapeHtml(fileNo)}</span>
+                <span>Dated: ${escapeHtml(wrnDate)}</span>
+            </div>
+            <div style="border-top: 1px solid #000; margin: 2mm 0 4mm 0;"></div>
+
+            <p style="margin-bottom: 2mm;"><strong>To,</strong></p>
+            <p style="margin: 2mm 0;">${escapeHtml(contractorName)}</p>
+            <p style="margin: 0;">${escapeHtml(contractorAddress).replace(/\n/g, '<br>')}</p>
+            ${bidId ? `<p style="margin: 0;">BID ID: ${escapeHtml(bidId)}</p>` : ''}
+            ${contact ? `<p style="margin: 0;">Contact: ${escapeHtml(contact)}</p>` : ''}
+
+            <p style="margin-top: 8mm; font-weight: bold;">Subject: Notice for Immediate Resumption and Completion of Work under ${escapeHtml(scheme.scheme_name)}</p>
+            <p style="margin-top: 4mm;">Ref: ${escapeHtml(refNo)}</p>
+
+            <p style="margin-top: 6mm;">Sir/Madam,</p>
+            <p style="text-align: justify;">It has been observed that the work of <strong>${escapeHtml(scheme.scheme_name)}</strong> under your responsibility has remained suspended/stopped for approximately <strong>${escapeHtml(duration)}</strong>. As the standstill period has now expired and there is no valid justification for further delay, the work is required to be resumed immediately.</p>
+            <p style="text-align: justify;">Despite repeated verbal discussions, meetings, and instructions issued by this office, the progress of the work has remained unsatisfactory and the pending activities have not yet been completed. You are therefore directed to mobilize resources and restart the work immediately to ensure its completion within the timeline prescribed by the Government/Department.</p>
+            <p style="text-align: justify;">You are further requested to visit this office and submit/sign an undertaking on or before <strong>${escapeHtml(undertakingDate)}</strong>, clearly stating that you shall complete all remaining works and commission the scheme within the stipulated time frame.</p>
+            <p style="text-align: justify;">Failure to submit the undertaking, resume the work, and complete the project within the prescribed timeline shall compel this office to initiate necessary action as per the terms and conditions of the agreement, including but not limited to:</p>
+            <ul style="margin: 4mm 0 4mm 15mm;">
+                <li>Withholding of pending bills and payments.</li>
+                <li>Imposition of penalties as per contract provisions.</li>
+                <li>Recommendation for blacklisting/debarment, wherever applicable.</li>
+                <li>Initiation of other contractual and legal actions deemed necessary by the Department.</li>
+            </ul>
+            <p style="text-align: justify; font-weight: bold;">This may be treated as MOST URGENT.</p>
+
+            <!-- Signature block aligned right -->
+            <div style="text-align: right; margin-top: 12mm;">
+                <p style="margin: 0;">Yours faithfully,</p>
+                <p style="margin: 0; margin-top: 8mm;"><strong>Executive Engineer (PHE)</strong></p>
+                <p style="margin: 0;">${escapeHtml(division)}</p>
+                <p style="margin: 0;">${escapeHtml(subDivision ? subDivision : '')}</p>
+            </div>
+
+            <p style="margin-top: 8mm; font-weight: bold;">Copy To:</p>
+            <ol style="margin: 2mm 0 4mm 10mm; list-style-type: decimal;">
+                <li>The Assistant Executive Engineer (PHE), ${escapeHtml(subDivision || '[Sub‑Division]')}, for kind information and necessary follow-up.</li>
+                <li>The Section Officer (PHE), ${escapeHtml(subDivision || '[Sub‑Division]')}, for kind information and necessary follow-up.</li>
+                <li>Office Copy.</li>
+            </ol>
+
+            <!-- Second right-aligned designation -->
+            <div style="text-align: right; margin-top: 8mm;">
+                <p style="margin: 0;"><strong>Executive Engineer (PHE)</strong></p>
+                <p style="margin: 0;">${escapeHtml(division)}</p>
+            </div>
+        </div>
+    `;
+    document.getElementById('wrnPreview').innerHTML = content;
+}
+
+function printWRN() {
+    document.body.classList.add('printing-wrn');
+    document.getElementById('wrnModal').offsetHeight;
+    window.print();
+    window.onafterprint = () => document.body.classList.remove('printing-wrn');
+}
+
+function updateWRNMargins() {
+    const t = Math.max(5, Math.min(50, parseInt(document.getElementById('wrnMarginTop').value) || 20));
+    const b = Math.max(5, Math.min(50, parseInt(document.getElementById('wrnMarginBottom').value) || 20));
+    const l = Math.max(5, Math.min(50, parseInt(document.getElementById('wrnMarginLeft').value) || 20));
+    const r = Math.max(5, Math.min(50, parseInt(document.getElementById('wrnMarginRight').value) || 20));
+    document.getElementById('wrnPreview').style.padding = `${t}mm ${r}mm ${b}mm ${l}mm`;
+    document.getElementById('wrnPreview').style.minHeight = `${297 - t - b}mm`;
+    updatePrintMargins('wrn');
+}
+
+// ==========================================
+// PRINT (SCN / Scheme / Report)
 // ==========================================
 function printSCN() {
     document.body.classList.add('printing-scn');
-    document.getElementById('scnModal').offsetHeight; // force reflow
+    document.getElementById('scnModal').offsetHeight;
     window.print();
     window.onafterprint = () => document.body.classList.remove('printing-scn');
 }
 function printSchemeDetail() {
     document.body.classList.add('printing-scheme');
-    document.getElementById('schemeDetailModal').offsetHeight; // force reflow
+    document.getElementById('schemeDetailModal').offsetHeight;
     window.print();
     window.onafterprint = () => document.body.classList.remove('printing-scheme');
 }
 function printReport() {
     document.body.classList.add('printing-report');
-    document.getElementById('reportModal').offsetHeight; // force reflow
+    document.getElementById('reportModal').offsetHeight;
     window.print();
     window.onafterprint = () => document.body.classList.remove('printing-report');
 }
 
-function updatePrintMargins() {
-    const t = Math.max(5, Math.min(50, parseInt(document.getElementById('marginTop').value) || 20));
-    const b = Math.max(5, Math.min(50, parseInt(document.getElementById('marginBottom').value) || 20));
-    const l = Math.max(5, Math.min(50, parseInt(document.getElementById('marginLeft').value) || 20));
-    const r = Math.max(5, Math.min(50, parseInt(document.getElementById('marginRight').value) || 20));
-    document.getElementById('scnPreview').style.padding = `${t}mm ${r}mm ${b}mm ${l}mm`;
-    document.getElementById('scnPreview').style.minHeight = `${297 - t - b}mm`;
+function updatePrintMargins(type) {
+    const paperSize = type === 'scn' ? document.getElementById('scnPaperSize')?.value || 'A4' :
+                     type === 'wrn' ? document.getElementById('wrnPaperSize')?.value || 'A4' :
+                     document.getElementById('reportPaperSize')?.value || 'A4';
+    let width, height;
+    if (paperSize === 'Legal') {
+        width = 215.9; height = 355.6;
+    } else {
+        width = 210; height = 297;
+    }
+    const t = parseInt(document.getElementById(type === 'scn' ? 'marginTop' : type === 'wrn' ? 'wrnMarginTop' : 'reportMarginTop')?.value || 20);
+    const b = parseInt(document.getElementById(type === 'scn' ? 'marginBottom' : type === 'wrn' ? 'wrnMarginBottom' : 'reportMarginBottom')?.value || 20);
+    const l = parseInt(document.getElementById(type === 'scn' ? 'marginLeft' : type === 'wrn' ? 'wrnMarginLeft' : 'reportMarginLeft')?.value || 20);
+    const r = parseInt(document.getElementById(type === 'scn' ? 'marginRight' : type === 'wrn' ? 'wrnMarginRight' : 'reportMarginRight')?.value || 20);
+
+    const previewId = type === 'scn' ? 'scnPreview' : type === 'wrn' ? 'wrnPreview' : 'reportPreview';
+    const preview = document.getElementById(previewId);
+    if (preview) {
+        preview.style.padding = `${t}mm ${r}mm ${b}mm ${l}mm`;
+        preview.style.minHeight = `${height - t - b}mm`;
+        preview.style.width = `${width}mm`;
+    }
+
+    // Update @page rule dynamically
+    const styleEl = document.getElementById('print-page-style');
+    if (styleEl) {
+        styleEl.textContent = `
+            @page {
+                size: ${width}mm ${height}mm;
+                margin: ${t}mm ${r}mm ${b}mm ${l}mm;
+            }
+        `;
+    }
 }
 
 // ==========================================
-// REPORT GENERATION (Professional Print) – includes Section Officer‑wise summary & Scheme Completion Timeline
+// REPORT GENERATION (Professional Print) – all sections except Detailed Task Breakdown
 // ==========================================
 function generateReportContent() {
     const dateStr = formatDate(state.reportDate);
@@ -1115,7 +1400,55 @@ function generateReportContent() {
     const avgCompletion = (state.schemes.reduce((s,x) => s + x.avg_completion, 0) / (totalSchemes || 1)).toFixed(1);
     const totalCompletedSchemes = state.schemes.filter(s => s.allTasksCompleted).length;
 
-    // Aggregation by section officer
+    // ===================== CONTRACTOR-WISE PROGRESS (per scheme, with serial) =====================
+    const uniqueContractors = [...new Set(state.schemes.map(s => s.contractor))].sort();
+    const contractorSerial = {};
+    uniqueContractors.forEach((c, idx) => { contractorSerial[c] = idx + 1; });
+
+    const schemesByContractor = [...state.schemes].sort((a,b) => a.contractor.localeCompare(b.contractor) || a.scheme_name.localeCompare(b.scheme_name));
+    let contractorRows = '';
+    schemesByContractor.forEach(s => {
+        const completed = state.rawData.filter(r => r.scheme_id === s.scheme_id && r.completion >= 100).length;
+        const progress = Math.round((completed / s.tasks) * 100);
+        contractorRows += `<tr>
+            <td>${contractorSerial[s.contractor]}</td>
+            <td>${escapeHtml(s.contractor)}</td>
+            <td>${escapeHtml(s.scheme_name)}</td>
+            <td>${escapeHtml(s.section_officer)}</td>
+            <td>${s.tasks}</td>
+            <td>${completed}</td>
+            <td>${progress}%</td>
+        </tr>`;
+    });
+
+    // ===================== COMPONENT-WISE PROGRESS =====================
+    const componentMap = {};
+    state.rawData.forEach(t => {
+        const comp = t.component || 'N/A';
+        if (!componentMap[comp]) {
+            componentMap[comp] = { totalTasks: 0, totalCompletion: 0, critical: 0, upcoming: 0, scheduled: 0 };
+        }
+        componentMap[comp].totalTasks++;
+        componentMap[comp].totalCompletion += t.completion;
+        const days = t.parsedDate ? Math.ceil((t.parsedDate - state.reportDate) / (1000*60*60*24)) : null;
+        if (days !== null && days < 7 && t.completion < 100) componentMap[comp].critical++;
+        else if (days !== null && days >= 7 && days <= 30) componentMap[comp].upcoming++;
+        else componentMap[comp].scheduled++;
+    });
+    let componentRows = '';
+    for (const [component, data] of Object.entries(componentMap)) {
+        const avg = Math.round(data.totalCompletion / data.totalTasks);
+        componentRows += `<tr>
+            <td>${escapeHtml(component)}</td>
+            <td>${data.totalTasks}</td>
+            <td>${avg}%</td>
+            <td>${data.critical}</td>
+            <td>${data.upcoming}</td>
+            <td>${data.scheduled}</td>
+        </tr>`;
+    }
+
+    // ===================== SECTION OFFICER-WISE PROGRESS =====================
     const officerMap = {};
     state.schemes.forEach(s => {
         const off = s.section_officer || 'N/A';
@@ -1129,7 +1462,6 @@ function generateReportContent() {
         officerMap[off].upcoming += s.upcoming;
         officerMap[off].scheduled += s.scheduled;
     });
-
     let officerRows = '';
     for (const [officer, data] of Object.entries(officerMap)) {
         const avg = Math.round(data.totalCompletion / data.totalTasks);
@@ -1144,7 +1476,7 @@ function generateReportContent() {
         </tr>`;
     }
 
-    // Scheme‑wise rows sorted by officer name
+    // ===================== SCHEME-WISE PROGRESS =====================
     const schemesSorted = [...state.schemes].sort((a,b) => a.section_officer.localeCompare(b.section_officer));
     let schemeRows = '';
     schemesSorted.forEach(s => {
@@ -1162,9 +1494,9 @@ function generateReportContent() {
         </tr>`;
     });
 
-    // Scheme Completion Timeline – based on latest due date per scheme
+    // ===================== SCHEME COMPLETION TIMELINE =====================
     const timelineSchemes = state.schemes
-        .filter(s => s.latestDueDate) // only schemes with at least one date
+        .filter(s => s.latestDueDate)
         .map(s => ({
             id: s.scheme_id,
             name: s.scheme_name,
@@ -1174,7 +1506,6 @@ function generateReportContent() {
             allCompleted: s.allTasksCompleted
         }))
         .sort((a,b) => a.finalDueDate - b.finalDueDate);
-
     let timelineRows = '';
     if (timelineSchemes.length) {
         timelineSchemes.forEach(s => {
@@ -1192,6 +1523,46 @@ function generateReportContent() {
         timelineRows = '<tr><td colspan="6">No data available</td></tr>';
     }
 
+    // ===================== DELAY ANALYSIS (OVERDUE TASKS) =====================
+    const overdueTasks = state.rawData.filter(t => t.parsedDate && t.parsedDate < state.reportDate && t.completion < 100)
+        .sort((a,b) => a.parsedDate - b.parsedDate);
+    let delayRows = '';
+    if (overdueTasks.length) {
+        overdueTasks.forEach(t => {
+            const daysOverdue = Math.ceil((state.reportDate - t.parsedDate) / (1000*60*60*24));
+            delayRows += `<tr>
+                <td>${escapeHtml(t.scheme_id)}</td>
+                <td>${escapeHtml(t.component)}</td>
+                <td>${escapeHtml(t.task)}</td>
+                <td>${t.due_date || '-'}</td>
+                <td>${t.completion}%</td>
+                <td>${daysOverdue}d</td>
+            </tr>`;
+        });
+    } else {
+        delayRows = '<tr><td colspan="6">No overdue tasks</td></tr>';
+    }
+
+    // ===================== RISK MATRIX =====================
+    const riskSchemes = state.schemes.filter(s => s.critical > 0 && s.avg_completion < 50)
+        .sort((a,b) => b.critical - a.critical || a.avg_completion - b.avg_completion);
+    let riskRows = '';
+    if (riskSchemes.length) {
+        riskSchemes.forEach(s => {
+            riskRows += `<tr>
+                <td>${escapeHtml(s.scheme_id)}</td>
+                <td>${escapeHtml(s.scheme_name)}</td>
+                <td>${escapeHtml(s.section_officer)}</td>
+                <td>${s.critical}</td>
+                <td>${s.avg_completion}%</td>
+                <td>HIGH RISK</td>
+            </tr>`;
+        });
+    } else {
+        riskRows = '<tr><td colspan="6">No high-risk schemes identified</td></tr>';
+    }
+
+    // ===================== CRITICAL TASKS =====================
     let criticalList = '';
     state.schemes.filter(s => s.scnTriggered).forEach(s => {
         s.scnTasks.forEach(t => {
@@ -1201,6 +1572,17 @@ function generateReportContent() {
     if (!criticalList) criticalList = '<li>None</li>';
 
     return `
+        <!-- COVER PAGE -->
+        <div style="page-break-after: always; text-align:center; padding-top: 40mm;">
+            <h1 style="font-size: 28pt; font-weight: bold; margin-bottom: 10mm;">Jal Jeevan Mission (JJM 2.0)</h1>
+            <h2 style="font-size: 20pt; font-weight: bold; margin-bottom: 8mm;">Abstract Progress Report</h2>
+            <div style="font-size: 14pt; margin-bottom: 5mm;">${escapeHtml(state.scnDetails.divisionName || 'Tinsukia Division')}</div>
+            <div style="font-size: 12pt; margin-bottom: 5mm;">Report Date: ${dateStr}</div>
+            <div style="font-size: 11pt; color: #555;">Generated on: ${new Date().toLocaleString()}</div>
+            <div style="margin-top: 30mm; font-size: 10pt; color: #888;">CONFIDENTIAL</div>
+        </div>
+
+        <!-- MAIN REPORT BODY -->
         <div class="report-header">
             <h1>Jal Jeevan Mission (JJM 2.0)</h1>
             <div class="subtitle">Abstract Progress Report</div>
@@ -1222,7 +1604,34 @@ function generateReportContent() {
         </div>
 
         <div class="report-section">
-            <h2>2. Section Officer‑wise Progress</h2>
+            <h2>2. Contractor‑wise Progress</h2>
+            <table class="scheme-table">
+                <thead>
+                    <tr>
+                        <th>Sl. No.</th>
+                        <th>Contractor</th><th>Scheme Name</th><th>Section Officer</th>
+                        <th>Tasks Assigned</th><th>Tasks Completed</th><th>Progress %</th>
+                    </tr>
+                </thead>
+                <tbody>${contractorRows}</tbody>
+            </table>
+        </div>
+
+        <div class="report-section">
+            <h2>3. Component‑wise Progress</h2>
+            <table class="scheme-table">
+                <thead>
+                    <tr>
+                        <th>Component</th><th>Tasks</th><th>Avg %</th>
+                        <th>Critical</th><th>Upcoming</th><th>Scheduled</th>
+                    </tr>
+                </thead>
+                <tbody>${componentRows}</tbody>
+            </table>
+        </div>
+
+        <div class="report-section">
+            <h2>4. Section Officer‑wise Progress</h2>
             <table class="scheme-table">
                 <thead>
                     <tr>
@@ -1235,7 +1644,7 @@ function generateReportContent() {
         </div>
 
         <div class="report-section">
-            <h2>3. Scheme‑wise Progress</h2>
+            <h2>5. Scheme‑wise Progress</h2>
             <table class="scheme-table">
                 <thead>
                     <tr>
@@ -1248,7 +1657,7 @@ function generateReportContent() {
         </div>
 
         <div class="report-section">
-            <h2>4. Scheme Completion Timeline</h2>
+            <h2>6. Scheme Completion Timeline</h2>
             <table class="scheme-table">
                 <thead>
                     <tr>
@@ -1260,7 +1669,31 @@ function generateReportContent() {
         </div>
 
         <div class="report-section">
-            <h2>5. Critical Tasks Requiring Attention</h2>
+            <h2>7. Delay Analysis (Overdue Tasks)</h2>
+            <table class="scheme-table">
+                <thead>
+                    <tr>
+                        <th>Scheme ID</th><th>Component</th><th>Task</th><th>Due Date</th><th>Completion</th><th>Days Overdue</th>
+                    </tr>
+                </thead>
+                <tbody>${delayRows}</tbody>
+            </table>
+        </div>
+
+        <div class="report-section">
+            <h2>8. Risk Matrix (High‑Risk Schemes)</h2>
+            <table class="scheme-table">
+                <thead>
+                    <tr>
+                        <th>Scheme ID</th><th>Name</th><th>Section Officer</th><th>Critical Tasks</th><th>Avg. Completion</th><th>Risk Level</th>
+                    </tr>
+                </thead>
+                <tbody>${riskRows}</tbody>
+            </table>
+        </div>
+
+        <div class="report-section">
+            <h2>9. Critical Tasks Requiring Attention</h2>
             <ul class="critical-list">${criticalList}</ul>
         </div>
 
@@ -1283,7 +1716,165 @@ function closeReportModal() {
 }
 
 // ==========================================
-// EXPORT TO CSV
+// EXPORT ABSTRACT REPORT XLSX (multiple sheets)
+// ==========================================
+function exportAbstractReportXLSX() {
+    if (state.schemes.length === 0) {
+        showToast('No Data', 'Nothing to export.', 'error');
+        return;
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    // 1. Executive Summary
+    const execRows = [
+        { Metric: 'Total Schemes', Value: state.schemes.length },
+        { Metric: 'Fully Completed Schemes', Value: state.schemes.filter(s => s.allTasksCompleted).length },
+        { Metric: 'Total Tasks', Value: state.rawData.length },
+        { Metric: 'Critical Tasks', Value: state.schemes.reduce((s,x)=>s+x.critical,0) },
+        { Metric: 'Upcoming Tasks', Value: state.schemes.reduce((s,x)=>s+x.upcoming,0) },
+        { Metric: 'Scheduled Tasks', Value: state.schemes.reduce((s,x)=>s+x.scheduled,0) },
+        { Metric: 'Overall Avg Completion', Value: (state.schemes.reduce((s,x)=>s+x.avg_completion,0) / (state.schemes.length||1)).toFixed(1)+'%' }
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(execRows), 'Executive Summary');
+
+    // 2. Contractor-wise Progress (with Sl. No.)
+    const uniqueContractors = [...new Set(state.schemes.map(s => s.contractor))].sort();
+    const contractorSerial = {};
+    uniqueContractors.forEach((c, idx) => { contractorSerial[c] = idx + 1; });
+    const schemesByContractor = [...state.schemes].sort((a,b) => a.contractor.localeCompare(b.contractor) || a.scheme_name.localeCompare(b.scheme_name));
+    const contractorData = schemesByContractor.map(s => {
+        const completed = state.rawData.filter(r => r.scheme_id === s.scheme_id && r.completion >= 100).length;
+        return {
+            'Sl. No.': contractorSerial[s.contractor],
+            'Contractor': s.contractor,
+            'Scheme Name': s.scheme_name,
+            'Section Officer': s.section_officer,
+            'Tasks Assigned': s.tasks,
+            'Tasks Completed': completed,
+            'Progress %': Math.round((completed / s.tasks) * 100) + '%'
+        };
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(contractorData), 'Contractor-wise');
+
+    // 3. Component-wise
+    const compMap = {};
+    state.rawData.forEach(t => {
+        const comp = t.component || 'N/A';
+        if (!compMap[comp]) compMap[comp] = { tasks:0, total:0, critical:0, upcoming:0, scheduled:0 };
+        compMap[comp].tasks++;
+        compMap[comp].total += t.completion;
+        const days = t.parsedDate ? Math.ceil((t.parsedDate - state.reportDate)/(1000*60*60*24)) : null;
+        if (days !== null && days < 7 && t.completion < 100) compMap[comp].critical++;
+        else if (days !== null && days >= 7 && days <= 30) compMap[comp].upcoming++;
+        else compMap[comp].scheduled++;
+    });
+    const componentData = Object.entries(compMap).map(([comp, data]) => ({
+        'Component': comp,
+        'Tasks': data.tasks,
+        'Avg %': Math.round(data.total/data.tasks) + '%',
+        'Critical': data.critical,
+        'Upcoming': data.upcoming,
+        'Scheduled': data.scheduled
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(componentData), 'Component-wise');
+
+    // 4. Section Officer-wise
+    const offMap = {};
+    state.schemes.forEach(s => {
+        const off = s.section_officer || 'N/A';
+        if (!offMap[off]) offMap[off] = { schemes:0, tasks:0, total:0, critical:0, upcoming:0, scheduled:0 };
+        offMap[off].schemes++;
+        offMap[off].tasks += s.tasks;
+        offMap[off].total += s.totalCompletion;
+        offMap[off].critical += s.critical;
+        offMap[off].upcoming += s.upcoming;
+        offMap[off].scheduled += s.scheduled;
+    });
+    const officerData = Object.entries(offMap).map(([off, data]) => ({
+        'Section Officer': off,
+        'Schemes': data.schemes,
+        'Tasks': data.tasks,
+        'Avg %': Math.round(data.total/data.tasks) + '%',
+        'Critical': data.critical,
+        'Upcoming': data.upcoming,
+        'Scheduled': data.scheduled
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(officerData), 'Officer-wise');
+
+    // 5. Scheme-wise
+    const schemeData = [...state.schemes].sort((a,b)=>a.section_officer.localeCompare(b.section_officer)).map(s => ({
+        'Scheme ID': s.scheme_id,
+        'Scheme Name': s.scheme_name,
+        'Section Officer': s.section_officer,
+        'Contractor': s.contractor,
+        'Tasks': s.tasks,
+        'Avg %': s.avg_completion + '%',
+        'Critical': s.critical,
+        'Upcoming': s.upcoming,
+        'Scheduled': s.scheduled,
+        'SCN': s.scnTriggered ? 'Yes' : 'No'
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(schemeData), 'Scheme-wise');
+
+    // 6. Completion Timeline
+    const timelineData = state.schemes.filter(s => s.latestDueDate).sort((a,b)=>a.latestDueDate - b.latestDueDate).map(s => ({
+        'Scheme ID': s.scheme_id,
+        'Scheme Name': s.scheme_name,
+        'Section Officer': s.section_officer,
+        'Final Due Date': formatDate(s.latestDueDate),
+        'Completion %': s.avg_completion + '%',
+        'Status': s.allTasksCompleted ? 'COMPLETED' : 'IN PROGRESS'
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(timelineData), 'Completion Timeline');
+
+    // 7. Delay Analysis
+    const overdue = state.rawData.filter(t => t.parsedDate && t.parsedDate < state.reportDate && t.completion < 100).sort((a,b)=>a.parsedDate - b.parsedDate);
+    const delayData = overdue.map(t => ({
+        'Scheme ID': t.scheme_id,
+        'Component': t.component,
+        'Task': t.task,
+        'Due Date': t.due_date,
+        'Completion %': t.completion + '%',
+        'Days Overdue': Math.ceil((state.reportDate - t.parsedDate)/(1000*60*60*24)) + 'd'
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(delayData), 'Delay Analysis');
+
+    // 8. Risk Matrix
+    const riskData = state.schemes.filter(s => s.critical > 0 && s.avg_completion < 50).sort((a,b)=>b.critical - a.critical || a.avg_completion - b.avg_completion).map(s => ({
+        'Scheme ID': s.scheme_id,
+        'Scheme Name': s.scheme_name,
+        'Section Officer': s.section_officer,
+        'Critical Tasks': s.critical,
+        'Avg Completion': s.avg_completion + '%',
+        'Risk Level': 'HIGH RISK'
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(riskData), 'Risk Matrix');
+
+    // 9. Critical Tasks
+    const critTasks = [];
+    state.schemes.filter(s => s.scnTriggered).forEach(s => {
+        s.scnTasks.forEach(t => {
+            critTasks.push({
+                'Scheme ID': s.scheme_id,
+                'Component': t.component,
+                'Task': t.task,
+                'Completion %': t.completion + '%',
+                'Days Remaining': t.daysRemaining + 'd'
+            });
+        });
+    });
+    if (critTasks.length) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(critTasks), 'Critical Tasks');
+    } else {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{'Info':'No critical tasks'}]), 'Critical Tasks');
+    }
+
+    XLSX.writeFile(wb, `abstract_report_${formatDateISO(state.reportDate)}.xlsx`);
+}
+
+// ==========================================
+// EXPORT TO CSV (simple scheme list)
 // ==========================================
 function exportToCSV() {
     if (state.schemes.length === 0) {
