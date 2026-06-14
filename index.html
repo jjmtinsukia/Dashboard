@@ -7,7 +7,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style id="print-page-style">
     /* Dynamic print page size rules will be inserted here */
@@ -1740,11 +1740,231 @@ function closeReportModal() {
 // EXPORT ABSTRACT REPORT XLSX (unchanged)
 // ==========================================
 function exportAbstractReportXLSX() {
-    if (state.schemes.length === 0) { showToast('No Data', 'Nothing to export.', 'error'); return; }
+    if (state.schemes.length === 0) {
+        showToast('No Data', 'Nothing to export.', 'error');
+        return;
+    }
+
     const wb = XLSX.utils.book_new();
-    // ... (same as original, using state.schemes and state.rawData)
-    // Keeping the existing XLSX export unchanged for brevity
-    XLSX.writeFile(wb, `abstract_report_${formatDateISO(state.reportDate)}.xlsx`);
+    const dateStr = formatDate(state.reportDate);
+    const reportDateISO = formatDateISO(state.reportDate);
+
+    // Helper
+    function addSheet(sheetName, headers, rows) {
+        const data = [headers, ...rows];
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    }
+
+    // 1. Executive Summary
+    const totalSchemes = state.schemes.length;
+    const totalCompletedSchemes = state.schemes.filter(s => s.allTasksCompleted).length;
+    const totalTasks = state.schemes.reduce((sum, s) => sum + s.tasks, 0);
+    const totalCritical = state.schemes.reduce((sum, s) => sum + s.critical, 0);
+    const totalUpcoming = state.schemes.reduce((sum, s) => sum + s.upcoming, 0);
+    const totalScheduled = state.schemes.reduce((sum, s) => sum + s.scheduled, 0);
+    const avgCompletion = totalSchemes ? (state.schemes.reduce((sum, s) => sum + s.avg_completion, 0) / totalSchemes).toFixed(1) : '0';
+
+    addSheet('Executive Summary',
+        ['Metric', 'Value'],
+        [
+            ['Report Date', dateStr],
+            ['Total Schemes', totalSchemes],
+            ['Fully Completed', totalCompletedSchemes],
+            ['Total Tasks', totalTasks],
+            ['Critical', totalCritical],
+            ['Upcoming', totalUpcoming],
+            ['Scheduled', totalScheduled],
+            ['Avg. Completion %', avgCompletion]
+        ]
+    );
+
+    // 2. Contractor-wise
+    const contractorSchemes = [...state.schemes].sort((a, b) => a.contractor.localeCompare(b.contractor));
+    const contractorRows = contractorSchemes.map((s, idx) => [
+        idx + 1,
+        s.contractor || 'N/A',
+        s.scheme_name || 'N/A',
+        s.section_officer || 'N/A',
+        s.tasks,
+        state.rawData.filter(r => r.scheme_id === s.scheme_id && r.completion >= 100).length,
+        s.avg_completion + '%',
+        s.latestDueDate ? formatDate(s.latestDueDate) : 'N/A'
+    ]);
+    addSheet('Contractor-wise',
+        ['Sl.', 'Contractor', 'Scheme', 'Officer', 'Tasks', 'Completed', '%', 'Final Due'],
+        contractorRows
+    );
+
+    // 3. Component-wise
+    const componentMap = {};
+    state.rawData.forEach(r => {
+        const comp = r.component || 'N/A';
+        if (!componentMap[comp]) componentMap[comp] = { tasks: 0, totalComp: 0, critical: 0, upcoming: 0, scheduled: 0 };
+        componentMap[comp].tasks++;
+        componentMap[comp].totalComp += r.completion;
+        const days = r.parsedDate ? Math.ceil((r.parsedDate - state.reportDate) / (1000 * 60 * 60 * 24)) : null;
+        if (days !== null && days < 7 && r.completion < 100) componentMap[comp].critical++;
+        else if (days !== null && days >= 7 && days <= 30) componentMap[comp].upcoming++;
+        else componentMap[comp].scheduled++;
+    });
+    const componentRows = Object.entries(componentMap).map(([comp, d]) => [
+        comp,
+        d.tasks,
+        Math.round(d.totalComp / d.tasks) + '%',
+        d.critical,
+        d.upcoming,
+        d.scheduled
+    ]);
+    addSheet('Component-wise',
+        ['Component', 'Tasks', 'Avg %', 'Critical', 'Upcoming', 'Scheduled'],
+        componentRows
+    );
+
+    // 4. Officer-wise
+    const officerMap = {};
+    state.schemes.forEach(s => {
+        const off = s.section_officer || 'N/A';
+        if (!officerMap[off]) officerMap[off] = { schemes: 0, tasks: 0, totalComp: 0, critical: 0, upcoming: 0, scheduled: 0 };
+        officerMap[off].schemes++;
+        officerMap[off].tasks += s.tasks;
+        officerMap[off].totalComp += s.totalCompletion;
+        officerMap[off].critical += s.critical;
+        officerMap[off].upcoming += s.upcoming;
+        officerMap[off].scheduled += s.scheduled;
+    });
+    const officerRows = Object.entries(officerMap).map(([off, d]) => [
+        off,
+        d.schemes,
+        d.tasks,
+        Math.round(d.totalComp / d.tasks) + '%',
+        d.critical,
+        d.upcoming,
+        d.scheduled
+    ]);
+    addSheet('Officer-wise',
+        ['Officer', 'Schemes', 'Tasks', 'Avg %', 'Critical', 'Upcoming', 'Scheduled'],
+        officerRows
+    );
+
+    // 5. Scheme-wise
+    const schemeRows = [...state.schemes]
+        .sort((a, b) => a.section_officer.localeCompare(b.section_officer))
+        .map(s => [
+            s.scheme_id,
+            s.scheme_name || 'N/A',
+            s.section_officer || 'N/A',
+            s.contractor || 'N/A',
+            s.tasks,
+            s.avg_completion + '%',
+            s.critical,
+            s.upcoming,
+            s.scheduled,
+            s.scnTriggered ? 'Yes' : 'No'
+        ]);
+    addSheet('Scheme-wise',
+        ['ID', 'Name', 'Officer', 'Contractor', 'Tasks', '%', 'Critical', 'Upcoming', 'Scheduled', 'SCN'],
+        schemeRows
+    );
+
+    // 6. Completion Timeline
+    const timelineSchemes = state.schemes
+        .filter(s => s.latestDueDate)
+        .sort((a, b) => a.latestDueDate - b.latestDueDate);
+    const timelineRows = timelineSchemes.map(s => [
+        s.scheme_id,
+        s.scheme_name || 'N/A',
+        s.section_officer || 'N/A',
+        formatDate(s.latestDueDate),
+        s.avg_completion + '%',
+        s.allTasksCompleted ? 'COMPLETED' : 'IN PROGRESS'
+    ]);
+    addSheet('Completion Timeline',
+        ['ID', 'Name', 'Officer', 'Final Due', '%', 'Status'],
+        timelineRows
+    );
+
+    // 7. Month-wise Target vs Achievement
+    const monthWise = {};
+    state.schemes.forEach(s => {
+        if (!s.latestDueDate) return;
+        const key = `${s.latestDueDate.getFullYear()}-${String(s.latestDueDate.getMonth() + 1).padStart(2, '0')}`;
+        if (!monthWise[key]) monthWise[key] = { schemes: 0, totalComp: 0 };
+        monthWise[key].schemes++;
+        monthWise[key].totalComp += s.avg_completion;
+    });
+    const monthTargetRows = Object.keys(monthWise)
+        .sort()
+        .map(month => [
+            month,
+            monthWise[month].schemes,
+            '100%',
+            Math.round(monthWise[month].totalComp / monthWise[month].schemes) + '%'
+        ]);
+    addSheet('Month-wise Target',
+        ['Month', 'Schemes', 'Target', 'Actual'],
+        monthTargetRows
+    );
+
+    // 8. Delay Analysis
+    const overdue = state.rawData
+        .filter(r => r.parsedDate && r.parsedDate < state.reportDate && r.completion < 100)
+        .sort((a, b) => a.parsedDate - b.parsedDate);
+    const delayRows = overdue.length > 0
+        ? overdue.map(r => [
+            r.scheme_id,
+            r.component || 'N/A',
+            r.task || 'N/A',
+            r.due_date || '-',
+            r.completion + '%',
+            Math.ceil((state.reportDate - r.parsedDate) / (1000 * 60 * 60 * 24)) + ' days'
+        ])
+        : [['No overdue tasks', '', '', '', '', '']];
+    addSheet('Delay Analysis',
+        ['Scheme ID', 'Component', 'Task', 'Due Date', 'Completion %', 'Overdue'],
+        delayRows
+    );
+
+    // 9. Risk Matrix
+    const riskSchemes = state.schemes
+        .filter(s => s.critical > 0 && s.avg_completion < 50)
+        .sort((a, b) => b.critical - a.critical);
+    const riskRows = riskSchemes.length > 0
+        ? riskSchemes.map(s => [
+            s.scheme_id,
+            s.scheme_name || 'N/A',
+            s.section_officer || 'N/A',
+            s.critical,
+            s.avg_completion + '%',
+            'HIGH RISK'
+        ])
+        : [['No high-risk schemes', '', '', '', '', '']];
+    addSheet('Risk Matrix',
+        ['ID', 'Name', 'Officer', 'Critical', 'Avg %', 'Risk Level'],
+        riskRows
+    );
+
+    // 10. Critical Tasks
+    let criticalRows = [];
+    state.schemes.forEach(s => {
+        if (s.scnTriggered) {
+            s.scnTasks.forEach(t => criticalRows.push([
+                s.scheme_id,
+                t.component,
+                t.task,
+                t.due_date,
+                t.completion + '%',
+                t.daysRemaining + 'd'
+            ]));
+        }
+    });
+    if (criticalRows.length === 0) criticalRows = [['None', '', '', '', '', '']];
+    addSheet('Critical Tasks',
+        ['Scheme ID', 'Component', 'Task', 'Due Date', 'Completion %', 'Days Remaining'],
+        criticalRows
+    );
+
+    XLSX.writeFile(wb, `abstract_report_${reportDateISO}.xlsx`);
 }
 
 // ==========================================
@@ -1911,3 +2131,295 @@ function showToast(title, message, type = 'success') {
 </script>
 </body>
 </html>
+
+<script>
+(function() {
+    // ===================== IMIS DATA INTEGRATION =====================
+    const IMIS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTZnZvA5Z9rKm18OYDe008BRBVLTzifwam0qkcnm0L1n4ejcQgEoiPCel4TqQvDn2cE3xvV68G2psBi/pub?gid=2125980002&single=true&output=csv';
+    let imisProgressMap = {};
+    let imisLoaded = false;
+
+    // Override aggregateSchemes to inject IMIS progress into each scheme
+    const originalAggregateSchemes = aggregateSchemes;
+    aggregateSchemes = function() {
+        originalAggregateSchemes();
+        if (imisLoaded) {
+            state.schemes.forEach(scheme => {
+                scheme.imisProgress = imisProgressMap[scheme.scheme_id] || 'N/A';
+            });
+        }
+    };
+
+    function loadIMISData() {
+        return fetch(IMIS_URL + '&t=' + Date.now())
+            .then(resp => resp.text())
+            .then(csvText => new Promise(resolve => {
+                Papa.parse(csvText, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: results => {
+                        results.data.forEach(row => {
+                            const schemeId = (row['Scheme ID'] || '').trim();
+                            const progress = (row['Physical Progress (IMIS)'] || '').trim();
+                            if (schemeId) imisProgressMap[schemeId] = progress;
+                        });
+                        imisLoaded = true;
+                        state.schemes.forEach(scheme => {
+                            scheme.imisProgress = imisProgressMap[scheme.scheme_id] || 'N/A';
+                        });
+                        resolve();
+                    }
+                });
+            }))
+            .catch(err => console.warn('IMIS data load failed', err));
+    }
+
+    // ===================== INIT & BUTTON =====================
+    const originalInitDashboard = initDashboard;
+    initDashboard = function() {
+        originalInitDashboard();
+        loadIMISData().then(() => {
+            if (!document.getElementById('btnRoadmapDownload')) {
+                addRoadmapButton();
+                createRoadmapModal();
+            }
+        });
+    };
+
+    function addRoadmapButton() {
+        const headerDiv = document.querySelector('header .flex.items-center.gap-4');
+        if (!headerDiv) return;
+        const lastBtn = headerDiv.querySelector('a.btn-popping');
+        if (lastBtn) {
+            const btnHTML = `<button id="btnRoadmapDownload" class="ml-2 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors flex items-center shadow-sm"><i class="fas fa-download mr-2"></i> Download Schematic Roadmap</button>`;
+            lastBtn.insertAdjacentHTML('afterend', btnHTML);
+            document.getElementById('btnRoadmapDownload').addEventListener('click', openRoadmapModal);
+        }
+    }
+
+    // ===================== ROADMAP MODAL =====================
+    function createRoadmapModal() {
+        const modalHTML = `
+        <div id="roadmapModal" class="fixed inset-0 z-50 hidden modal-backdrop overflow-y-auto">
+            <div class="min-h-screen flex items-start justify-center p-4 py-6">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-md relative my-4">
+                    <div class="flex justify-between items-center p-4 border-b border-gray-200">
+                        <h2 class="text-sm font-bold text-gray-700 uppercase"><i class="fas fa-road text-indigo-600"></i> Download Schematic Roadmap</h2>
+                        <button onclick="document.getElementById('roadmapModal').classList.add('hidden')" class="px-3 py-1 border rounded-lg hover:bg-gray-50">Close</button>
+                    </div>
+                    <div class="p-4 space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Section Officer</label>
+                            <select id="roadmapOfficer" class="w-full border rounded-lg px-3 py-2 text-sm">
+                                <option value="">-- Select Officer --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Paper Size</label>
+                            <select id="roadmapPaperSize" class="w-full border rounded-lg px-3 py-2 text-sm">
+                                <option value="A4">A4</option>
+                                <option value="Legal">Legal</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-1">Orientation</label>
+                            <p class="text-sm text-gray-500">Landscape (fixed)</p>
+                        </div>
+                        <button id="btnGenerateRoadmap" class="w-full py-2.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700">
+                            <i class="fas fa-file-pdf mr-2"></i> Generate & Print
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        document.getElementById('btnGenerateRoadmap').addEventListener('click', generateRoadmap);
+    }
+
+    function openRoadmapModal() {
+        populateRoadmapOfficers();
+        document.getElementById('roadmapModal').classList.remove('hidden');
+    }
+
+    function populateRoadmapOfficers() {
+        const select = document.getElementById('roadmapOfficer');
+        if (!select) return;
+        const officers = [...new Set(state.schemes.map(s => s.section_officer).filter(Boolean))].sort();
+        select.innerHTML = '<option value="">-- Select Officer --</option>';
+        officers.forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            select.appendChild(opt);
+        });
+    }
+
+    function generateRoadmap() {
+        const officer = document.getElementById('roadmapOfficer').value;
+        if (!officer) { showToast('Error', 'Please select a Section Officer.', 'error'); return; }
+        const paperSize = document.getElementById('roadmapPaperSize').value;
+        const officerSchemes = state.schemes.filter(s => s.section_officer === officer);
+        if (officerSchemes.length === 0) {
+            showToast('No Schemes', `No schemes found for ${officer}.`, 'error');
+            return;
+        }
+
+        // Build data for each scheme
+        const schemesData = officerSchemes.map(scheme => {
+            const tasks = state.rawData.filter(r => r.scheme_id === scheme.scheme_id);
+            const ganttLabels = tasks.map(t => `${t.component}: ${t.task}`);
+            const ganttData = tasks.map(t => t.parsedDate ? Math.max(0, Math.ceil((t.parsedDate - state.reportDate) / (1000*60*60*24))) : 0);
+            const ganttColors = tasks.map(t => {
+                if (!t.parsedDate) return '#059669';
+                const days = Math.ceil((t.parsedDate - state.reportDate) / (1000*60*60*24));
+                if (days < 7 && t.completion < 100) return '#dc2626';
+                if (days >= 7 && days <= 30) return '#d97706';
+                return '#059669';
+            });
+            return {
+                id: scheme.scheme_id,
+                name: scheme.scheme_name,
+                contractor: scheme.contractor,
+                officer: scheme.section_officer,
+                imisProgress: scheme.imisProgress || 'N/A',
+                tasks: tasks.map(t => ({
+                    component: t.component,
+                    task: t.task,
+                    due_date: t.due_date,
+                    completion: t.completion
+                })),
+                gantt: { labels: ganttLabels, data: ganttData, colors: ganttColors }
+            };
+        });
+
+        // Build HTML for each scheme page
+        let schemesHTML = '';
+        schemesData.forEach(s => {
+            const taskRows = s.tasks.map(t =>
+                `<tr><td>${escapeHtml(t.component)}</td><td>${escapeHtml(t.task)}</td><td>${t.due_date||'-'}</td><td>${t.completion}%</td></tr>`
+            ).join('');
+            schemesHTML += `
+            <div class="scheme-page">
+                <h2>${escapeHtml(s.name)} (${escapeHtml(s.id)})</h2>
+                <p><strong>Contractor:</strong> ${escapeHtml(s.contractor)}</p>
+                <p><strong>Section Officer:</strong> ${escapeHtml(s.officer)}</p>
+                <p><strong>IMIS Physical Progress:</strong> ${escapeHtml(s.imisProgress)}${s.imisProgress !== 'N/A' ? '%' : ''}</p>
+                <h3>Task List</h3>
+                <table class="task-table">
+                    <thead><tr><th>Component</th><th>Task</th><th>Due Date</th><th>Completion %</th></tr></thead>
+                    <tbody>${taskRows}</tbody>
+                </table>
+                <h3>Gantt Chart (Days to Deadline)</h3>
+                <div class="gantt-container"><canvas id="chart_${s.id}"></canvas></div>
+                <div class="signature-section">
+                    <div class="signature-box">
+                        <div class="signature-line"></div>
+                        <p>Contractor</p>
+                        <p>M/s ${escapeHtml(s.contractor)}</p>
+                    </div>
+                    <div class="signature-box">
+                        <div class="signature-line"></div>
+                        <p>Section Officer</p>
+                        <p>${escapeHtml(s.officer)}</p>
+                    </div>
+                </div>
+            </div>`;
+        });
+
+        const pageWidth = paperSize === 'Legal' ? '355.6mm' : '297mm';
+        const pageHeight = paperSize === 'Legal' ? '215.9mm' : '210mm';
+
+        const fullHTML = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Roadmap - ${escapeHtml(officer)}</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+<style>
+    @page { size: ${pageWidth} ${pageHeight}; margin: 15mm; }
+    body { font-family: 'Times New Roman', Times, serif; color: #000; line-height: 1.4; }
+    .scheme-page { page-break-after: always; }
+    .scheme-page:last-child { page-break-after: auto; }
+    h2 { font-size: 16pt; margin-top: 0; }
+    h3 { font-size: 13pt; border-bottom: 1px solid #999; padding-bottom: 2px; }
+    .task-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    .task-table th, .task-table td { border: 1px solid #666; padding: 3px 5px; font-size: 10pt; }
+    .task-table th { background: #f0f0f0; }
+    .gantt-container { width: 100%; height: 220px; margin: 10px 0; }
+    .signature-section { margin-top: 20px; display: flex; justify-content: space-between; }
+    .signature-box { width: 45%; text-align: center; }
+    .signature-line { border-top: 1px solid black; margin-top: 30px; margin-bottom: 5px; }
+</style>
+</head>
+<body>
+${schemesHTML}
+<script>
+    window.onload = function() {
+        var schemesData = ${JSON.stringify(schemesData.map(s => ({ id: s.id, gantt: s.gantt })))};
+        schemesData.forEach(function(s) {
+            var ctx = document.getElementById('chart_' + s.id);
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: s.gantt.labels,
+                        datasets: [{
+                            data: s.gantt.data,
+                            backgroundColor: s.gantt.colors,
+                            borderRadius: 3,
+                            barPercentage: 0.7
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+        });
+        setTimeout(function() { window.print(); }, 600);
+    };
+<\/script>
+</body>
+</html>`;
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(fullHTML);
+        printWindow.document.close();
+    }
+
+    // ===================== INJECT IMIS INTO SCHEME DETAIL =====================
+    const originalViewScheme = viewScheme;
+    viewScheme = function(schemeId) {
+        originalViewScheme(schemeId);
+        setTimeout(() => addIMISToDetail(schemeId), 50);
+    };
+
+    function addIMISToDetail(schemeId) {
+        const scheme = state.schemes.find(s => s.scheme_id === schemeId);
+        if (!scheme) return;
+        const imisVal = scheme.imisProgress || 'N/A';
+        const imisText = imisVal !== 'N/A' ? imisVal + '%' : 'N/A';
+
+        // Screen view – add a row in the info grid
+        const screenGrid = document.querySelector('#schemeDetailContent .bg-gray-50.rounded-lg.p-4.mb-6.border.border-gray-200.screen-only');
+        if (screenGrid && !screenGrid.querySelector('.imis-progress-row')) {
+            const row = document.createElement('div');
+            row.className = 'imis-progress-row mt-2 pt-2 border-t border-gray-200';
+            row.innerHTML = `<p class="text-[10px] text-gray-500 uppercase font-bold">IMIS Physical Progress</p><p class="font-bold text-gray-900 text-base">${imisText}</p>`;
+            screenGrid.appendChild(row);
+        }
+
+        // Print view – add a row to the scheme-info table
+        const printTable = document.querySelector('#schemeDetailContent .scheme-info.print-only');
+        if (printTable && !printTable.querySelector('.imis-progress-print')) {
+            const row = document.createElement('tr');
+            row.className = 'imis-progress-print';
+            row.innerHTML = `<td class="label">IMIS Physical Progress</td><td>${imisText}</td>`;
+            printTable.appendChild(row);
+        }
+    }
+})();
+</script>
