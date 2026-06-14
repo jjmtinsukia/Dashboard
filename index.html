@@ -10,7 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style id="print-page-style">
-    /* Dynamic print page size rules */
+    /* Dynamic print page size rules will be inserted here */
 </style>
 <style>
     /* ===== LOGIN OVERLAY ===== */
@@ -1407,7 +1407,7 @@ function updatePrintMargins(type) {
 }
 
 // ==========================================
-// REPORT GENERATION (unchanged)
+// REPORT GENERATION (Updated: Contractor-wise Final Due Date, Month-wise Target vs Achievement, page breaks)
 // ==========================================
 function generateReportContent() {
     const dateStr = formatDate(state.reportDate);
@@ -1419,6 +1419,7 @@ function generateReportContent() {
     const avgCompletion = (state.schemes.reduce((s,x) => s + x.avg_completion, 0) / (totalSchemes || 1)).toFixed(1);
     const totalCompletedSchemes = state.schemes.filter(s => s.allTasksCompleted).length;
 
+    // ===================== CONTRACTOR-WISE PROGRESS (with Final Due Date) =====================
     const uniqueContractors = [...new Set(state.schemes.map(s => s.contractor))].sort();
     const contractorSerial = {};
     uniqueContractors.forEach((c, idx) => { contractorSerial[c] = idx + 1; });
@@ -1436,13 +1437,17 @@ function generateReportContent() {
             <td>${s.tasks}</td>
             <td>${completed}</td>
             <td>${progress}%</td>
+            <td>${s.latestDueDate ? formatDate(s.latestDueDate) : 'N/A'}</td>
         </tr>`;
     });
 
+    // ===================== COMPONENT-WISE PROGRESS =====================
     const componentMap = {};
     state.rawData.forEach(t => {
         const comp = t.component || 'N/A';
-        if (!componentMap[comp]) componentMap[comp] = { totalTasks: 0, totalCompletion: 0, critical: 0, upcoming: 0, scheduled: 0 };
+        if (!componentMap[comp]) {
+            componentMap[comp] = { totalTasks: 0, totalCompletion: 0, critical: 0, upcoming: 0, scheduled: 0 };
+        }
         componentMap[comp].totalTasks++;
         componentMap[comp].totalCompletion += t.completion;
         const days = t.parsedDate ? Math.ceil((t.parsedDate - state.reportDate) / (1000*60*60*24)) : null;
@@ -1463,13 +1468,19 @@ function generateReportContent() {
         </tr>`;
     }
 
+    // ===================== SECTION OFFICER-WISE PROGRESS =====================
     const officerMap = {};
     state.schemes.forEach(s => {
         const off = s.section_officer || 'N/A';
-        if (!officerMap[off]) officerMap[off] = { schemes: 0, totalTasks: 0, totalCompletion: 0, critical: 0, upcoming: 0, scheduled: 0 };
-        officerMap[off].schemes++; officerMap[off].totalTasks += s.tasks;
+        if (!officerMap[off]) {
+            officerMap[off] = { schemes: 0, totalTasks: 0, totalCompletion: 0, critical: 0, upcoming: 0, scheduled: 0 };
+        }
+        officerMap[off].schemes++;
+        officerMap[off].totalTasks += s.tasks;
         officerMap[off].totalCompletion += s.totalCompletion;
-        officerMap[off].critical += s.critical; officerMap[off].upcoming += s.upcoming; officerMap[off].scheduled += s.scheduled;
+        officerMap[off].critical += s.critical;
+        officerMap[off].upcoming += s.upcoming;
+        officerMap[off].scheduled += s.scheduled;
     });
     let officerRows = '';
     for (const [officer, data] of Object.entries(officerMap)) {
@@ -1485,6 +1496,7 @@ function generateReportContent() {
         </tr>`;
     }
 
+    // ===================== SCHEME-WISE PROGRESS =====================
     const schemesSorted = [...state.schemes].sort((a,b) => a.section_officer.localeCompare(b.section_officer));
     let schemeRows = '';
     schemesSorted.forEach(s => {
@@ -1502,10 +1514,18 @@ function generateReportContent() {
         </tr>`;
     });
 
-    const timelineSchemes = state.schemes.filter(s => s.latestDueDate).map(s => ({
-        id: s.scheme_id, name: s.scheme_name, officer: s.section_officer,
-        finalDueDate: s.latestDueDate, completion: s.avg_completion, allCompleted: s.allTasksCompleted
-    })).sort((a,b) => a.finalDueDate - b.finalDueDate);
+    // ===================== SCHEME COMPLETION TIMELINE =====================
+    const timelineSchemes = state.schemes
+        .filter(s => s.latestDueDate)
+        .map(s => ({
+            id: s.scheme_id,
+            name: s.scheme_name,
+            officer: s.section_officer,
+            finalDueDate: s.latestDueDate,
+            completion: s.avg_completion,
+            allCompleted: s.allTasksCompleted
+        }))
+        .sort((a,b) => a.finalDueDate - b.finalDueDate);
     let timelineRows = '';
     if (timelineSchemes.length) {
         timelineSchemes.forEach(s => {
@@ -1519,9 +1539,37 @@ function generateReportContent() {
                 <td>${status}</td>
             </tr>`;
         });
-    } else { timelineRows = '<tr><td colspan="6">No data available</td></tr>'; }
+    } else {
+        timelineRows = '<tr><td colspan="6">No data available</td></tr>';
+    }
 
-    const overdueTasks = state.rawData.filter(t => t.parsedDate && t.parsedDate < state.reportDate && t.completion < 100).sort((a,b) => a.parsedDate - b.parsedDate);
+    // ===================== MONTH-WISE TARGET vs ACHIEVEMENT =====================
+    const monthWise = {};
+    state.schemes.forEach(s => {
+        if (!s.latestDueDate) return;
+        const monthKey = `${s.latestDueDate.getFullYear()}-${String(s.latestDueDate.getMonth()+1).padStart(2,'0')}`;
+        if (!monthWise[monthKey]) {
+            monthWise[monthKey] = { schemes: 0, totalCompletion: 0 };
+        }
+        monthWise[monthKey].schemes++;
+        monthWise[monthKey].totalCompletion += s.avg_completion;
+    });
+    const sortedMonths = Object.keys(monthWise).sort();
+    let monthTargetRows = '';
+    sortedMonths.forEach(month => {
+        const data = monthWise[month];
+        const avg = Math.round(data.totalCompletion / data.schemes);
+        monthTargetRows += `<tr>
+            <td>${month}</td>
+            <td>${data.schemes}</td>
+            <td>100%</td>
+            <td>${avg}%</td>
+        </tr>`;
+    });
+
+    // ===================== DELAY ANALYSIS (OVERDUE TASKS) =====================
+    const overdueTasks = state.rawData.filter(t => t.parsedDate && t.parsedDate < state.reportDate && t.completion < 100)
+        .sort((a,b) => a.parsedDate - b.parsedDate);
     let delayRows = '';
     if (overdueTasks.length) {
         overdueTasks.forEach(t => {
@@ -1535,9 +1583,13 @@ function generateReportContent() {
                 <td>${daysOverdue}d</td>
             </tr>`;
         });
-    } else { delayRows = '<tr><td colspan="6">No overdue tasks</td></tr>'; }
+    } else {
+        delayRows = '<tr><td colspan="6">No overdue tasks</td></tr>';
+    }
 
-    const riskSchemes = state.schemes.filter(s => s.critical > 0 && s.avg_completion < 50).sort((a,b) => b.critical - a.critical || a.avg_completion - b.avg_completion);
+    // ===================== RISK MATRIX =====================
+    const riskSchemes = state.schemes.filter(s => s.critical > 0 && s.avg_completion < 50)
+        .sort((a,b) => b.critical - a.critical || a.avg_completion - b.avg_completion);
     let riskRows = '';
     if (riskSchemes.length) {
         riskSchemes.forEach(s => {
@@ -1550,15 +1602,21 @@ function generateReportContent() {
                 <td>HIGH RISK</td>
             </tr>`;
         });
-    } else { riskRows = '<tr><td colspan="6">No high-risk schemes identified</td></tr>'; }
+    } else {
+        riskRows = '<tr><td colspan="6">No high-risk schemes identified</td></tr>';
+    }
 
+    // ===================== CRITICAL TASKS =====================
     let criticalList = '';
     state.schemes.filter(s => s.scnTriggered).forEach(s => {
-        s.scnTasks.forEach(t => { criticalList += `<li>${escapeHtml(s.scheme_id)} – ${escapeHtml(t.component)}: ${escapeHtml(t.task)} (${t.completion}%, ${t.daysRemaining}d)</li>`; });
+        s.scnTasks.forEach(t => {
+            criticalList += `<li>${escapeHtml(s.scheme_id)} – ${escapeHtml(t.component)}: ${escapeHtml(t.task)} (${t.completion}%, ${t.daysRemaining}d)</li>`;
+        });
     });
     if (!criticalList) criticalList = '<li>None</li>';
 
     return `
+        <!-- COVER PAGE -->
         <div style="page-break-after: always; text-align:center; padding-top: 40mm;">
             <h1 style="font-size: 28pt; font-weight: bold; margin-bottom: 10mm;">Jal Jeevan Mission (JJM 2.0)</h1>
             <h2 style="font-size: 20pt; font-weight: bold; margin-bottom: 8mm;">Abstract Progress Report</h2>
@@ -1568,14 +1626,15 @@ function generateReportContent() {
             <div style="margin-top: 30mm; font-size: 10pt; color: #888;">CONFIDENTIAL</div>
         </div>
 
-        <div class="report-header">
+        <!-- MAIN REPORT BODY -->
+        <div class="report-header" style="page-break-before: always;">
             <h1>Jal Jeevan Mission (JJM 2.0)</h1>
             <div class="subtitle">Abstract Progress Report</div>
             <div class="meta">Report Date: ${dateStr} &nbsp;|&nbsp; Generated on: ${new Date().toLocaleString()}</div>
             <div class="meta">Division: ${escapeHtml(state.scnDetails.divisionName || 'Tinsukia Division')}</div>
         </div>
 
-        <div class="report-section">
+        <div class="report-section" style="page-break-before: always;">
             <h2>1. Executive Summary</h2>
             <table class="summary-table">
                 <tr><td class="label">Total Schemes</td><td>${totalSchemes}</td></tr>
@@ -1588,60 +1647,109 @@ function generateReportContent() {
             </table>
         </div>
 
-        <div class="report-section">
+        <div class="report-section" style="page-break-before: always;">
             <h2>2. Contractor‑wise Progress</h2>
-            <table class="scheme-table"><thead><tr>
-                <th>Sl. No.</th><th>Contractor</th><th>Scheme Name</th><th>Section Officer</th>
-                <th>Tasks Assigned</th><th>Tasks Completed</th><th>Progress %</th>
-            </tr></thead><tbody>${contractorRows}</tbody></table>
+            <table class="scheme-table">
+                <thead>
+                    <tr>
+                        <th>Sl. No.</th>
+                        <th>Contractor</th><th>Scheme Name</th><th>Section Officer</th>
+                        <th>Tasks Assigned</th><th>Tasks Completed</th><th>Progress %</th><th>Final Due Date</th>
+                    </tr>
+                </thead>
+                <tbody>${contractorRows}</tbody>
+            </table>
         </div>
 
-        <div class="report-section">
+        <div class="report-section" style="page-break-before: always;">
             <h2>3. Component‑wise Progress</h2>
-            <table class="scheme-table"><thead><tr>
-                <th>Component</th><th>Tasks</th><th>Avg %</th><th>Critical</th><th>Upcoming</th><th>Scheduled</th>
-            </tr></thead><tbody>${componentRows}</tbody></table>
+            <table class="scheme-table">
+                <thead>
+                    <tr>
+                        <th>Component</th><th>Tasks</th><th>Avg %</th>
+                        <th>Critical</th><th>Upcoming</th><th>Scheduled</th>
+                    </tr>
+                </thead>
+                <tbody>${componentRows}</tbody>
+            </table>
         </div>
 
-        <div class="report-section">
+        <div class="report-section" style="page-break-before: always;">
             <h2>4. Section Officer‑wise Progress</h2>
-            <table class="scheme-table"><thead><tr>
-                <th>Section Officer</th><th>Schemes</th><th>Tasks</th><th>Avg %</th>
-                <th>Critical</th><th>Upcoming</th><th>Scheduled</th>
-            </tr></thead><tbody>${officerRows}</tbody></table>
+            <table class="scheme-table">
+                <thead>
+                    <tr>
+                        <th>Section Officer</th><th>Schemes</th><th>Tasks</th><th>Avg %</th>
+                        <th>Critical</th><th>Upcoming</th><th>Scheduled</th>
+                    </tr>
+                </thead>
+                <tbody>${officerRows}</tbody>
+            </table>
         </div>
 
-        <div class="report-section">
+        <div class="report-section" style="page-break-before: always;">
             <h2>5. Scheme‑wise Progress</h2>
-            <table class="scheme-table"><thead><tr>
-                <th>Scheme ID</th><th>Name</th><th>Officer</th><th>Contractor</th>
-                <th>Tasks</th><th>Avg %</th><th>Critical</th><th>Upcoming</th><th>Scheduled</th><th>SCN</th>
-            </tr></thead><tbody>${schemeRows}</tbody></table>
+            <table class="scheme-table">
+                <thead>
+                    <tr>
+                        <th>Scheme ID</th><th>Name</th><th>Officer</th><th>Contractor</th>
+                        <th>Tasks</th><th>Avg %</th><th>Critical</th><th>Upcoming</th><th>Scheduled</th><th>SCN</th>
+                    </tr>
+                </thead>
+                <tbody>${schemeRows}</tbody>
+            </table>
         </div>
 
-        <div class="report-section">
+        <div class="report-section" style="page-break-before: always;">
             <h2>6. Scheme Completion Timeline</h2>
-            <table class="scheme-table"><thead><tr>
-                <th>Scheme ID</th><th>Name</th><th>Section Officer</th><th>Final Due Date</th><th>Completion %</th><th>Status</th>
-            </tr></thead><tbody>${timelineRows}</tbody></table>
+            <table class="scheme-table">
+                <thead>
+                    <tr>
+                        <th>Scheme ID</th><th>Name</th><th>Section Officer</th><th>Final Due Date</th><th>Completion %</th><th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>${timelineRows}</tbody>
+            </table>
         </div>
 
-        <div class="report-section">
-            <h2>7. Delay Analysis (Overdue Tasks)</h2>
-            <table class="scheme-table"><thead><tr>
-                <th>Scheme ID</th><th>Component</th><th>Task</th><th>Due Date</th><th>Completion</th><th>Days Overdue</th>
-            </tr></thead><tbody>${delayRows}</tbody></table>
+        <div class="report-section" style="page-break-before: always;">
+            <h2>7. Month‑wise Overall Scheme Completion Target vs Achievement</h2>
+            <table class="scheme-table">
+                <thead>
+                    <tr>
+                        <th>Month</th><th>No. of Schemes</th><th>Target Completion</th><th>Actual Avg Completion</th>
+                    </tr>
+                </thead>
+                <tbody>${monthTargetRows}</tbody>
+            </table>
         </div>
 
-        <div class="report-section">
-            <h2>8. Risk Matrix (High‑Risk Schemes)</h2>
-            <table class="scheme-table"><thead><tr>
-                <th>Scheme ID</th><th>Name</th><th>Section Officer</th><th>Critical Tasks</th><th>Avg. Completion</th><th>Risk Level</th>
-            </tr></thead><tbody>${riskRows}</tbody></table>
+        <div class="report-section" style="page-break-before: always;">
+            <h2>8. Delay Analysis (Overdue Tasks)</h2>
+            <table class="scheme-table">
+                <thead>
+                    <tr>
+                        <th>Scheme ID</th><th>Component</th><th>Task</th><th>Due Date</th><th>Completion</th><th>Days Overdue</th>
+                    </tr>
+                </thead>
+                <tbody>${delayRows}</tbody>
+            </table>
         </div>
 
-        <div class="report-section">
-            <h2>9. Critical Tasks Requiring Attention</h2>
+        <div class="report-section" style="page-break-before: always;">
+            <h2>9. Risk Matrix (High‑Risk Schemes)</h2>
+            <table class="scheme-table">
+                <thead>
+                    <tr>
+                        <th>Scheme ID</th><th>Name</th><th>Section Officer</th><th>Critical Tasks</th><th>Avg. Completion</th><th>Risk Level</th>
+                    </tr>
+                </thead>
+                <tbody>${riskRows}</tbody>
+            </table>
+        </div>
+
+        <div class="report-section" style="page-break-before: always;">
+            <h2>10. Critical Tasks Requiring Attention</h2>
             <ul class="critical-list">${criticalList}</ul>
         </div>
 
@@ -1658,165 +1766,381 @@ function openReportPreview() {
     document.body.style.overflow = 'hidden';
 }
 
-function closeReportModal() { document.getElementById('reportModal').classList.add('hidden'); document.body.style.overflow = ''; }
+function closeReportModal() {
+    document.getElementById('reportModal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
 
 // ==========================================
-// EXPORT ABSTRACT REPORT XLSX (unchanged)
+// EXPORT ABSTRACT REPORT XLSX (updated with new columns)
 // ==========================================
 function exportAbstractReportXLSX() {
-    if (state.schemes.length === 0) { showToast('No Data', 'Nothing to export.', 'error'); return; }
+    if (state.schemes.length === 0) {
+        showToast('No Data', 'Nothing to export.', 'error');
+        return;
+    }
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{Metric:'Total Schemes',Value:state.schemes.length},{Metric:'Fully Completed',Value:state.schemes.filter(s=>s.allTasksCompleted).length},{Metric:'Total Tasks',Value:state.rawData.length},{Metric:'Critical Tasks',Value:state.schemes.reduce((s,x)=>s+x.critical,0)},{Metric:'Upcoming Tasks',Value:state.schemes.reduce((s,x)=>s+x.upcoming,0)},{Metric:'Scheduled Tasks',Value:state.schemes.reduce((s,x)=>s+x.scheduled,0)},{Metric:'Overall Avg Completion',Value:(state.schemes.reduce((s,x)=>s+x.avg_completion,0)/(state.schemes.length||1)).toFixed(1)+'%'}]), 'Executive Summary');
-    const uniqueContractors = [...new Set(state.schemes.map(s=>s.contractor))].sort();
-    const contractorSerial = {}; uniqueContractors.forEach((c,idx)=>{contractorSerial[c]=idx+1;});
-    const schemesByContractor = [...state.schemes].sort((a,b)=>a.contractor.localeCompare(b.contractor)||a.scheme_name.localeCompare(b.scheme_name));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(schemesByContractor.map(s=>{const completed=state.rawData.filter(r=>r.scheme_id===s.scheme_id&&r.completion>=100).length;return{'Sl. No.':contractorSerial[s.contractor],'Contractor':s.contractor,'Scheme Name':s.scheme_name,'Section Officer':s.section_officer,'Tasks Assigned':s.tasks,'Tasks Completed':completed,'Progress %':Math.round((completed/s.tasks)*100)+'%'};})), 'Contractor-wise');
+
+    // 1. Executive Summary
+    const execRows = [
+        { Metric: 'Total Schemes', Value: state.schemes.length },
+        { Metric: 'Fully Completed Schemes', Value: state.schemes.filter(s => s.allTasksCompleted).length },
+        { Metric: 'Total Tasks', Value: state.rawData.length },
+        { Metric: 'Critical Tasks', Value: state.schemes.reduce((s,x)=>s+x.critical,0) },
+        { Metric: 'Upcoming Tasks', Value: state.schemes.reduce((s,x)=>s+x.upcoming,0) },
+        { Metric: 'Scheduled Tasks', Value: state.schemes.reduce((s,x)=>s+x.scheduled,0) },
+        { Metric: 'Overall Avg Completion', Value: (state.schemes.reduce((s,x)=>s+x.avg_completion,0) / (state.schemes.length||1)).toFixed(1)+'%' }
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(execRows), 'Executive Summary');
+
+    // 2. Contractor-wise Progress (with Final Due Date)
+    const uniqueContractors = [...new Set(state.schemes.map(s => s.contractor))].sort();
+    const contractorSerial = {};
+    uniqueContractors.forEach((c, idx) => { contractorSerial[c] = idx + 1; });
+    const schemesByContractor = [...state.schemes].sort((a,b) => a.contractor.localeCompare(b.contractor) || a.scheme_name.localeCompare(b.scheme_name));
+    const contractorData = schemesByContractor.map(s => {
+        const completed = state.rawData.filter(r => r.scheme_id === s.scheme_id && r.completion >= 100).length;
+        return {
+            'Sl. No.': contractorSerial[s.contractor],
+            'Contractor': s.contractor,
+            'Scheme Name': s.scheme_name,
+            'Section Officer': s.section_officer,
+            'Tasks Assigned': s.tasks,
+            'Tasks Completed': completed,
+            'Progress %': Math.round((completed / s.tasks) * 100) + '%',
+            'Final Due Date': s.latestDueDate ? formatDate(s.latestDueDate) : 'N/A'
+        };
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(contractorData), 'Contractor-wise');
+
+    // 3. Component-wise (same)
     const compMap = {};
-    state.rawData.forEach(t=>{const comp=t.component||'N/A';if(!compMap[comp])compMap[comp]={tasks:0,total:0,critical:0,upcoming:0,scheduled:0};compMap[comp].tasks++;compMap[comp].total+=t.completion;const days=t.parsedDate?Math.ceil((t.parsedDate-state.reportDate)/(1000*60*60*24)):null;if(days!==null&&days<7&&t.completion<100)compMap[comp].critical++;else if(days!==null&&days>=7&&days<=30)compMap[comp].upcoming++;else compMap[comp].scheduled++;});
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Object.entries(compMap).map(([comp,data])=>({'Component':comp,'Tasks':data.tasks,'Avg %':Math.round(data.total/data.tasks)+'%','Critical':data.critical,'Upcoming':data.upcoming,'Scheduled':data.scheduled}))), 'Component-wise');
+    state.rawData.forEach(t => {
+        const comp = t.component || 'N/A';
+        if (!compMap[comp]) compMap[comp] = { tasks:0, total:0, critical:0, upcoming:0, scheduled:0 };
+        compMap[comp].tasks++;
+        compMap[comp].total += t.completion;
+        const days = t.parsedDate ? Math.ceil((t.parsedDate - state.reportDate)/(1000*60*60*24)) : null;
+        if (days !== null && days < 7 && t.completion < 100) compMap[comp].critical++;
+        else if (days !== null && days >= 7 && days <= 30) compMap[comp].upcoming++;
+        else compMap[comp].scheduled++;
+    });
+    const componentData = Object.entries(compMap).map(([comp, data]) => ({
+        'Component': comp,
+        'Tasks': data.tasks,
+        'Avg %': Math.round(data.total/data.tasks) + '%',
+        'Critical': data.critical,
+        'Upcoming': data.upcoming,
+        'Scheduled': data.scheduled
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(componentData), 'Component-wise');
+
+    // 4. Section Officer-wise (same)
     const offMap = {};
-    state.schemes.forEach(s=>{const off=s.section_officer||'N/A';if(!offMap[off])offMap[off]={schemes:0,tasks:0,total:0,critical:0,upcoming:0,scheduled:0};offMap[off].schemes++;offMap[off].tasks+=s.tasks;offMap[off].total+=s.totalCompletion;offMap[off].critical+=s.critical;offMap[off].upcoming+=s.upcoming;offMap[off].scheduled+=s.scheduled;});
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Object.entries(offMap).map(([off,data])=>({'Section Officer':off,'Schemes':data.schemes,'Tasks':data.tasks,'Avg %':Math.round(data.total/data.tasks)+'%','Critical':data.critical,'Upcoming':data.upcoming,'Scheduled':data.scheduled}))), 'Officer-wise');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([...state.schemes].sort((a,b)=>a.section_officer.localeCompare(b.section_officer)).map(s=>({'Scheme ID':s.scheme_id,'Scheme Name':s.scheme_name,'Section Officer':s.section_officer,'Contractor':s.contractor,'Tasks':s.tasks,'Avg %':s.avg_completion+'%','Critical':s.critical,'Upcoming':s.upcoming,'Scheduled':s.scheduled,'SCN':s.scnTriggered?'Yes':'No'}))), 'Scheme-wise');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.schemes.filter(s=>s.latestDueDate).sort((a,b)=>a.latestDueDate-b.latestDueDate).map(s=>({'Scheme ID':s.scheme_id,'Scheme Name':s.scheme_name,'Section Officer':s.section_officer,'Final Due Date':formatDate(s.latestDueDate),'Completion %':s.avg_completion+'%','Status':s.allTasksCompleted?'COMPLETED':'IN PROGRESS'}))), 'Completion Timeline');
-    const overdue = state.rawData.filter(t=>t.parsedDate&&t.parsedDate<state.reportDate&&t.completion<100).sort((a,b)=>a.parsedDate-b.parsedDate);
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(overdue.map(t=>({'Scheme ID':t.scheme_id,'Component':t.component,'Task':t.task,'Due Date':t.due_date,'Completion %':t.completion+'%','Days Overdue':Math.ceil((state.reportDate-t.parsedDate)/(1000*60*60*24))+'d'}))), 'Delay Analysis');
-    const riskSchemes = state.schemes.filter(s=>s.critical>0&&s.avg_completion<50).sort((a,b)=>b.critical-a.critical||a.avg_completion-b.avg_completion);
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(riskSchemes.map(s=>({'Scheme ID':s.scheme_id,'Scheme Name':s.scheme_name,'Section Officer':s.section_officer,'Critical Tasks':s.critical,'Avg Completion':s.avg_completion+'%','Risk Level':'HIGH RISK'}))), 'Risk Matrix');
+    state.schemes.forEach(s => {
+        const off = s.section_officer || 'N/A';
+        if (!offMap[off]) offMap[off] = { schemes:0, tasks:0, total:0, critical:0, upcoming:0, scheduled:0 };
+        offMap[off].schemes++;
+        offMap[off].tasks += s.tasks;
+        offMap[off].total += s.totalCompletion;
+        offMap[off].critical += s.critical;
+        offMap[off].upcoming += s.upcoming;
+        offMap[off].scheduled += s.scheduled;
+    });
+    const officerData = Object.entries(offMap).map(([off, data]) => ({
+        'Section Officer': off,
+        'Schemes': data.schemes,
+        'Tasks': data.tasks,
+        'Avg %': Math.round(data.total/data.tasks) + '%',
+        'Critical': data.critical,
+        'Upcoming': data.upcoming,
+        'Scheduled': data.scheduled
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(officerData), 'Officer-wise');
+
+    // 5. Scheme-wise (same)
+    const schemeData = [...state.schemes].sort((a,b)=>a.section_officer.localeCompare(b.section_officer)).map(s => ({
+        'Scheme ID': s.scheme_id,
+        'Scheme Name': s.scheme_name,
+        'Section Officer': s.section_officer,
+        'Contractor': s.contractor,
+        'Tasks': s.tasks,
+        'Avg %': s.avg_completion + '%',
+        'Critical': s.critical,
+        'Upcoming': s.upcoming,
+        'Scheduled': s.scheduled,
+        'SCN': s.scnTriggered ? 'Yes' : 'No'
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(schemeData), 'Scheme-wise');
+
+    // 6. Completion Timeline (same)
+    const timelineData = state.schemes.filter(s => s.latestDueDate).sort((a,b)=>a.latestDueDate - b.latestDueDate).map(s => ({
+        'Scheme ID': s.scheme_id,
+        'Scheme Name': s.scheme_name,
+        'Section Officer': s.section_officer,
+        'Final Due Date': formatDate(s.latestDueDate),
+        'Completion %': s.avg_completion + '%',
+        'Status': s.allTasksCompleted ? 'COMPLETED' : 'IN PROGRESS'
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(timelineData), 'Completion Timeline');
+
+    // 7. Month-wise Target vs Achievement (new)
+    const monthWiseXLSX = {};
+    state.schemes.forEach(s => {
+        if (!s.latestDueDate) return;
+        const monthKey = `${s.latestDueDate.getFullYear()}-${String(s.latestDueDate.getMonth()+1).padStart(2,'0')}`;
+        if (!monthWiseXLSX[monthKey]) { monthWiseXLSX[monthKey] = { schemes: 0, totalCompletion: 0 }; }
+        monthWiseXLSX[monthKey].schemes++;
+        monthWiseXLSX[monthKey].totalCompletion += s.avg_completion;
+    });
+    const monthTargetData = Object.keys(monthWiseXLSX).sort().map(month => ({
+        'Month': month,
+        'No. of Schemes': monthWiseXLSX[month].schemes,
+        'Target Completion': '100%',
+        'Actual Avg Completion': Math.round(monthWiseXLSX[month].totalCompletion / monthWiseXLSX[month].schemes) + '%'
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(monthTargetData), 'Month-wise Target vs Achieve');
+
+    // 8. Delay Analysis (same)
+    const overdue = state.rawData.filter(t => t.parsedDate && t.parsedDate < state.reportDate && t.completion < 100).sort((a,b)=>a.parsedDate - b.parsedDate);
+    const delayData = overdue.map(t => ({
+        'Scheme ID': t.scheme_id,
+        'Component': t.component,
+        'Task': t.task,
+        'Due Date': t.due_date,
+        'Completion %': t.completion + '%',
+        'Days Overdue': Math.ceil((state.reportDate - t.parsedDate)/(1000*60*60*24)) + 'd'
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(delayData), 'Delay Analysis');
+
+    // 9. Risk Matrix (same)
+    const riskData = state.schemes.filter(s => s.critical > 0 && s.avg_completion < 50).sort((a,b)=>b.critical - a.critical || a.avg_completion - b.avg_completion).map(s => ({
+        'Scheme ID': s.scheme_id,
+        'Scheme Name': s.scheme_name,
+        'Section Officer': s.section_officer,
+        'Critical Tasks': s.critical,
+        'Avg Completion': s.avg_completion + '%',
+        'Risk Level': 'HIGH RISK'
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(riskData), 'Risk Matrix');
+
+    // 10. Critical Tasks (same)
     const critTasks = [];
-    state.schemes.filter(s=>s.scnTriggered).forEach(s=>{s.scnTasks.forEach(t=>{critTasks.push({'Scheme ID':s.scheme_id,'Component':t.component,'Task':t.task,'Completion %':t.completion+'%','Days Remaining':t.daysRemaining+'d'});});});
-    if(critTasks.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(critTasks),'Critical Tasks');else XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Info:'No critical tasks'}]),'Critical Tasks');
+    state.schemes.filter(s => s.scnTriggered).forEach(s => {
+        s.scnTasks.forEach(t => {
+            critTasks.push({
+                'Scheme ID': s.scheme_id,
+                'Component': t.component,
+                'Task': t.task,
+                'Completion %': t.completion + '%',
+                'Days Remaining': t.daysRemaining + 'd'
+            });
+        });
+    });
+    if (critTasks.length) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(critTasks), 'Critical Tasks');
+    } else {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{'Info':'No critical tasks'}]), 'Critical Tasks');
+    }
+
     XLSX.writeFile(wb, `abstract_report_${formatDateISO(state.reportDate)}.xlsx`);
 }
 
+// ==========================================
+// EXPORT TO CSV (simple scheme list)
+// ==========================================
 function exportToCSV() {
-    if(state.schemes.length===0){showToast('No Data','Nothing to export.','error');return;}
-    const headers=['Scheme ID','Scheme Name','Section Officer','Contractor','Tasks','Avg. Completion','Critical','Upcoming','Scheduled','SCN Triggered'];
-    const rows=[headers.join(',')];
-    state.schemes.forEach(s=>{rows.push([s.scheme_id,`"${s.scheme_name.replace(/"/g,'""')}"`,`"${s.section_officer.replace(/"/g,'""')}"`,`"${s.contractor.replace(/"/g,'""')}"`,s.tasks,s.avg_completion+'%',s.critical,s.upcoming,s.scheduled,s.scnTriggered?'Yes':'No'].join(','));});
-    const csvContent=rows.join('\n');
-    const blob=new Blob([csvContent],{type:'text/csv;charset=utf-8;'});
-    const url=URL.createObjectURL(blob);
-    const link=document.createElement('a');link.href=url;link.download=`schemes_report_${formatDateISO(state.reportDate)}.csv`;
-    document.body.appendChild(link);link.click();document.body.removeChild(link);URL.revokeObjectURL(url);
+    if (state.schemes.length === 0) {
+        showToast('No Data', 'Nothing to export.', 'error');
+        return;
+    }
+
+    const headers = ['Scheme ID','Scheme Name','Section Officer','Contractor','Tasks','Avg. Completion','Critical','Upcoming','Scheduled','SCN Triggered'];
+    const rows = [headers.join(',')];
+
+    state.schemes.forEach(s => {
+        rows.push([
+            s.scheme_id,
+            `"${s.scheme_name.replace(/"/g, '""')}"`,
+            `"${s.section_officer.replace(/"/g, '""')}"`,
+            `"${s.contractor.replace(/"/g, '""')}"`,
+            s.tasks,
+            s.avg_completion + '%',
+            s.critical,
+            s.upcoming,
+            s.scheduled,
+            s.scnTriggered ? 'Yes' : 'No'
+        ].join(','));
+    });
+
+    const csvContent = rows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `schemes_report_${formatDateISO(state.reportDate)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 // ==========================================
 // PAGINATION, SORTING, FILTERS, TABLE
 // ==========================================
-function toggleFilters(){const p=document.getElementById('filterPanel');p.style.display=p.style.display==='none'?'flex':'none';}
-function populateFilters(){
-    const officers=[...new Set(state.rawData.map(r=>r.section_officer).filter(Boolean))].sort();
-    const contractors=[...new Set(state.rawData.map(r=>r.contractor).filter(Boolean))].sort();
-    const components=[...new Set(state.rawData.map(r=>r.component).filter(Boolean))].sort();
-    populateSelect('filterOfficer',officers);populateSelect('filterContractor',contractors);populateSelect('filterComponent',components);
+function toggleFilters() { const p = document.getElementById('filterPanel'); p.style.display = p.style.display === 'none' ? 'flex' : 'none'; }
+
+function populateFilters() {
+    const officers = [...new Set(state.rawData.map(r => r.section_officer).filter(Boolean))].sort();
+    const contractors = [...new Set(state.rawData.map(r => r.contractor).filter(Boolean))].sort();
+    const components = [...new Set(state.rawData.map(r => r.component).filter(Boolean))].sort();
+    populateSelect('filterOfficer', officers); populateSelect('filterContractor', contractors); populateSelect('filterComponent', components);
 }
-function populateSelect(id,options){
-    const sel=document.getElementById(id);sel.innerHTML=`<option value="">All</option>`;
-    options.forEach(o=>{const opt=document.createElement('option');opt.value=o;opt.textContent=o;sel.appendChild(opt);});
+function populateSelect(id, options) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = `<option value="">All</option>`;
+    options.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o; sel.appendChild(opt); });
 }
-function applyFilters(){
-    state.filters.officer=document.getElementById('filterOfficer').value;
-    state.filters.contractor=document.getElementById('filterContractor').value;
-    state.filters.component=document.getElementById('filterComponent').value;
-    state.filters.search=document.getElementById('globalSearch').value.toLowerCase();
-    state.filtered=state.schemes.filter(s=>{
-        const m=!state.filters.search||s.scheme_id.toLowerCase().includes(state.filters.search)||s.scheme_name.toLowerCase().includes(state.filters.search)||s.contractor.toLowerCase().includes(state.filters.search);
-        const mo=!state.filters.officer||s.section_officer===state.filters.officer;
-        const mc=!state.filters.contractor||s.contractor===state.filters.contractor;
-        const mcomp=!state.filters.component||state.rawData.some(r=>r.scheme_id===s.scheme_id&&r.component===state.filters.component);
-        return m&&mo&&mc&&mcomp;
+function applyFilters() {
+    state.filters.officer = document.getElementById('filterOfficer').value;
+    state.filters.contractor = document.getElementById('filterContractor').value;
+    state.filters.component = document.getElementById('filterComponent').value;
+    state.filters.search = document.getElementById('globalSearch').value.toLowerCase();
+    state.filtered = state.schemes.filter(s => {
+        const m = !state.filters.search || s.scheme_id.toLowerCase().includes(state.filters.search) || s.scheme_name.toLowerCase().includes(state.filters.search) || s.contractor.toLowerCase().includes(state.filters.search);
+        const mo = !state.filters.officer || s.section_officer === state.filters.officer;
+        const mc = !state.filters.contractor || s.contractor === state.filters.contractor;
+        const mcomp = !state.filters.component || state.rawData.some(r => r.scheme_id === s.scheme_id && r.component === state.filters.component);
+        return m && mo && mc && mcomp;
     });
-    state.filtered=getSortedSchemes(state.filtered);state.currentPage=1;updateStats();renderTable();
+    state.filtered = getSortedSchemes(state.filtered);
+    state.currentPage = 1;
+    updateStats(); renderTable();
 }
-function clearFilters(){
-    document.getElementById('globalSearch').value='';document.getElementById('filterOfficer').value='';document.getElementById('filterContractor').value='';document.getElementById('filterComponent').value='';
-    state.filters={search:'',officer:'',contractor:'',component:''};applyFilters();
+function clearFilters() {
+    document.getElementById('globalSearch').value = '';
+    document.getElementById('filterOfficer').value = '';
+    document.getElementById('filterContractor').value = '';
+    document.getElementById('filterComponent').value = '';
+    state.filters = { search: '', officer: '', contractor: '', component: '' };
+    applyFilters();
 }
-function updateStats(){
-    document.getElementById('statSchemes').textContent=state.filtered.length;
-    const totalTasks=state.filtered.reduce((s,x)=>s+x.tasks,0);
-    document.getElementById('statTasks').textContent=`${totalTasks} task${totalTasks!==1?'s':''} across all`;
-    document.getElementById('statCritical').textContent=state.filtered.reduce((s,x)=>s+x.critical,0);
-    document.getElementById('statUpcoming').textContent=state.filtered.reduce((s,x)=>s+x.upcoming,0);
-    document.getElementById('statScheduled').textContent=state.filtered.reduce((s,x)=>s+x.scheduled,0);
-    document.getElementById('statCompletedSchemes').textContent=state.filtered.filter(s=>s.allTasksCompleted).length;
+function updateStats() {
+    document.getElementById('statSchemes').textContent = state.filtered.length;
+    const totalTasks = state.filtered.reduce((s,x) => s + x.tasks, 0);
+    document.getElementById('statTasks').textContent = `${totalTasks} task${totalTasks!==1?'s':''} across all`;
+    document.getElementById('statCritical').textContent = state.filtered.reduce((s,x) => s + x.critical, 0);
+    document.getElementById('statUpcoming').textContent = state.filtered.reduce((s,x) => s + x.upcoming, 0);
+    document.getElementById('statScheduled').textContent = state.filtered.reduce((s,x) => s + x.scheduled, 0);
+    document.getElementById('statCompletedSchemes').textContent = state.filtered.filter(s => s.allTasksCompleted).length;
 }
-function sortBy(column){
-    if(state.sortColumn===column)state.sortDirection=state.sortDirection==='asc'?'desc':'asc';
-    else{state.sortColumn=column;state.sortDirection='asc';}
-    updateSortIcons();applyFilters();
+
+function sortBy(column) {
+    if (state.sortColumn === column) state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+    else { state.sortColumn = column; state.sortDirection = 'asc'; }
+    updateSortIcons();
+    applyFilters();
 }
-function updateSortIcons(){
-    document.querySelectorAll('.sort-icon').forEach(icon=>{icon.classList.remove('active','fa-sort-up','fa-sort-down');icon.classList.add('fa-sort');});
-    if(state.sortColumn){const icon=document.getElementById(`sort-icon-${state.sortColumn}`);if(icon){icon.classList.add('active');icon.classList.remove('fa-sort');icon.classList.add(state.sortDirection==='asc'?'fa-sort-up':'fa-sort-down');}}
+function updateSortIcons() {
+    document.querySelectorAll('.sort-icon').forEach(icon => { icon.classList.remove('active','fa-sort-up','fa-sort-down'); icon.classList.add('fa-sort'); });
+    if (state.sortColumn) {
+        const icon = document.getElementById(`sort-icon-${state.sortColumn}`);
+        if (icon) { icon.classList.add('active'); icon.classList.remove('fa-sort'); icon.classList.add(state.sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'); }
+    }
 }
-function getSortedSchemes(array){
-    if(!state.sortColumn)return array;
-    const col=state.sortColumn;const dir=state.sortDirection==='asc'?1:-1;
-    return[...array].sort((a,b)=>{
-        let va=a[col],vb=b[col];
-        if(['tasks','avg_completion','critical','upcoming','scheduled'].includes(col))return(va-vb)*dir;
-        va=(va||'').toString().toLowerCase();vb=(vb||'').toString().toLowerCase();
-        return va<vb?-1*dir:va>vb?1*dir:0;
+function getSortedSchemes(array) {
+    if (!state.sortColumn) return array;
+    const col = state.sortColumn;
+    const dir = state.sortDirection === 'asc' ? 1 : -1;
+    return [...array].sort((a,b) => {
+        let va = a[col], vb = b[col];
+        if (['tasks','avg_completion','critical','upcoming','scheduled'].includes(col)) return (va - vb) * dir;
+        va = (va||'').toString().toLowerCase(); vb = (vb||'').toString().toLowerCase();
+        return va < vb ? -1*dir : va > vb ? 1*dir : 0;
     });
 }
-function changePageSize(){
-    const val=document.getElementById('pageSizeSelect').value;
-    state.pageSize=val==='all'?'all':parseInt(val);state.currentPage=1;
-    sessionStorage.setItem('jjm_page_size',val);renderTable();
+function changePageSize() {
+    const val = document.getElementById('pageSizeSelect').value;
+    state.pageSize = val === 'all' ? 'all' : parseInt(val);
+    state.currentPage = 1;
+    sessionStorage.setItem('jjm_page_size', val);
+    renderTable();
 }
-function goToPage(page){state.currentPage=page;renderTable();}
-function renderPagination(totalItems){
-    const container=document.getElementById('paginationButtons');const info=document.getElementById('paginationInfo');
-    if(state.pageSize==='all'||totalItems<=state.pageSize){container.innerHTML='';info.textContent=`Showing all ${totalItems} entries`;return;}
-    const totalPages=Math.ceil(totalItems/state.pageSize);const current=state.currentPage;
-    const start=(current-1)*state.pageSize+1;const end=Math.min(current*state.pageSize,totalItems);
-    info.textContent=`Showing ${start} to ${end} of ${totalItems} entries`;
-    let html=`<button onclick="goToPage(${current-1})" ${current===1?'disabled':''} class="px-3 py-1 text-sm border rounded ${current===1?'bg-gray-100 text-gray-400 cursor-not-allowed':'bg-white hover:bg-gray-50 text-gray-700'}"><i class="fas fa-chevron-left"></i></button>`;
-    for(let i=1;i<=totalPages;i++)html+=`<button onclick="goToPage(${i})" class="px-3 py-1 text-sm border rounded ${i===current?'bg-blue-600 text-white':'bg-white hover:bg-gray-50 text-gray-700'}">${i}</button>`;
-    html+=`<button onclick="goToPage(${current+1})" ${current===totalPages?'disabled':''} class="px-3 py-1 text-sm border rounded ${current===totalPages?'bg-gray-100 text-gray-400 cursor-not-allowed':'bg-white hover:bg-gray-50 text-gray-700'}"><i class="fas fa-chevron-right"></i></button>`;
-    container.innerHTML=html;
+function goToPage(page) { state.currentPage = page; renderTable(); }
+function renderPagination(totalItems) {
+    const container = document.getElementById('paginationButtons');
+    const info = document.getElementById('paginationInfo');
+    if (state.pageSize === 'all' || totalItems <= state.pageSize) {
+        container.innerHTML = '';
+        info.textContent = `Showing all ${totalItems} entries`;
+        return;
+    }
+    const totalPages = Math.ceil(totalItems / state.pageSize);
+    const current = state.currentPage;
+    const start = (current-1) * state.pageSize + 1;
+    const end = Math.min(current * state.pageSize, totalItems);
+    info.textContent = `Showing ${start} to ${end} of ${totalItems} entries`;
+    let html = `<button onclick="goToPage(${current-1})" ${current===1?'disabled':''} class="px-3 py-1 text-sm border rounded ${current===1?'bg-gray-100 text-gray-400 cursor-not-allowed':'bg-white hover:bg-gray-50 text-gray-700'}"><i class="fas fa-chevron-left"></i></button>`;
+    for (let i=1; i<=totalPages; i++) html += `<button onclick="goToPage(${i})" class="px-3 py-1 text-sm border rounded ${i===current?'bg-blue-600 text-white':'bg-white hover:bg-gray-50 text-gray-700'}">${i}</button>`;
+    html += `<button onclick="goToPage(${current+1})" ${current===totalPages?'disabled':''} class="px-3 py-1 text-sm border rounded ${current===totalPages?'bg-gray-100 text-gray-400 cursor-not-allowed':'bg-white hover:bg-gray-50 text-gray-700'}"><i class="fas fa-chevron-right"></i></button>`;
+    container.innerHTML = html;
 }
-function renderTable(){
-    const tbody=document.getElementById('tableBody');tbody.innerHTML='';
-    if(state.filtered.length===0){tbody.innerHTML=`<tr><td colspan="11" class="px-4 py-12 text-center text-gray-500"><i class="fas fa-search text-2xl mb-2 block text-gray-300"></i>No schemes match your filters.</td></tr>`;renderPagination(0);return;}
-    let schemesToRender=state.filtered;const totalCount=schemesToRender.length;
-    if(state.pageSize!=='all'){const start=(state.currentPage-1)*state.pageSize;schemesToRender=schemesToRender.slice(start,start+state.pageSize);}
-    schemesToRender.forEach(s=>{
-        const tr=document.createElement('tr');tr.className='hover:bg-gray-50 transition-colors';
-        let progColor=s.avg_completion<30?'bg-red-500':s.avg_completion<70?'bg-orange-500':'bg-blue-600';
-        tr.innerHTML=`
-            <td class="px-4 py-3 text-sm font-bold text-gray-900">${s.scnTriggered?'<span class="inline-block w-2 h-2 bg-red-500 rounded-full mr-1.5 align-middle"></span>':''}${escapeHtml(s.scheme_id)}</td>
+function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+    if (state.filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" class="px-4 py-12 text-center text-gray-500"><i class="fas fa-search text-2xl mb-2 block text-gray-300"></i>No schemes match your filters.</td></tr>`;
+        renderPagination(0);
+        return;
+    }
+    let schemesToRender = state.filtered;
+    const totalCount = schemesToRender.length;
+    if (state.pageSize !== 'all') {
+        const start = (state.currentPage - 1) * state.pageSize;
+        schemesToRender = schemesToRender.slice(start, start + state.pageSize);
+    }
+    schemesToRender.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50 transition-colors';
+        let progColor = s.avg_completion < 30 ? 'bg-red-500' : s.avg_completion < 70 ? 'bg-orange-500' : 'bg-blue-600';
+        tr.innerHTML = `
+            <td class="px-4 py-3 text-sm font-bold text-gray-900">${s.scnTriggered ? '<span class="inline-block w-2 h-2 bg-red-500 rounded-full mr-1.5 align-middle"></span>' : ''}${escapeHtml(s.scheme_id)}</td>
             <td class="px-4 py-3 text-sm text-gray-700 font-medium">${escapeHtml(s.scheme_name)}</td>
             <td class="px-4 py-3 text-sm text-gray-600">${escapeHtml(s.section_officer)}</td>
             <td class="px-4 py-3 text-sm text-gray-600">${escapeHtml(s.contractor)}</td>
             <td class="px-4 py-3 text-sm text-center font-bold text-gray-800">${s.tasks}</td>
             <td class="px-4 py-3 text-sm"><div class="flex items-center justify-center gap-2"><div class="w-16 bg-gray-200 rounded-full h-2"><div class="${progColor} h-2 rounded-full" style="width:${s.avg_completion}%"></div></div><span class="text-xs font-bold text-gray-700">${s.avg_completion}%</span></div></td>
-            <td class="px-4 py-3 text-center">${s.critical>0?`<span class="px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">${s.critical}</span>`:'<span class="text-gray-300">—</span>'}</td>
-            <td class="px-4 py-3 text-center">${s.upcoming>0?`<span class="px-2 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800">${s.upcoming}</span>`:'<span class="text-gray-300">—</span>'}</td>
+            <td class="px-4 py-3 text-center">${s.critical > 0 ? `<span class="px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">${s.critical}</span>` : '<span class="text-gray-300">—</span>'}</td>
+            <td class="px-4 py-3 text-center">${s.upcoming > 0 ? `<span class="px-2 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800">${s.upcoming}</span>` : '<span class="text-gray-300">—</span>'}</td>
             <td class="px-4 py-3 text-center"><span class="px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800">${s.scheduled}</span></td>
-            <td class="px-4 py-3 text-center">${s.scnTriggered?`<button onclick="openSCNForScheme('${s.scheme_id}')" class="px-3 py-1.5 text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors">Issue</button>`:'<span class="text-gray-300">—</span>'}</td>
+            <td class="px-4 py-3 text-center">${s.scnTriggered ? `<button onclick="openSCNForScheme('${s.scheme_id}')" class="px-3 py-1.5 text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors">Issue</button>` : '<span class="text-gray-300">—</span>'}</td>
             <td class="px-4 py-3 text-center"><button onclick="viewScheme('${s.scheme_id}')" class="px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors">View</button></td>
         `;
         tbody.appendChild(tr);
     });
-    renderPagination(totalCount);updateSortIcons();
+    renderPagination(totalCount);
+    updateSortIcons();
 }
 
 // ==========================================
 // UTILITIES
 // ==========================================
-function escapeHtml(text){if(!text)return'N/A';const div=document.createElement('div');div.textContent=text;return div.innerHTML;}
-function showToast(title,message,type='success'){
-    const toast=document.getElementById('toast');const content=document.getElementById('toastContent');const icon=document.getElementById('toastIcon');
-    document.getElementById('toastTitle').textContent=title;document.getElementById('toastMessage').textContent=message;
-    content.className='bg-white border-l-4 shadow-xl rounded-lg p-4 flex items-center gap-3 min-w-[300px]';
-    if(type==='success'){content.classList.add('border-green-500');icon.className='fas fa-check-circle text-green-500 text-xl';}
-    else if(type==='error'){content.classList.add('border-red-500');icon.className='fas fa-exclamation-circle text-red-500 text-xl';}
-    else{content.classList.add('border-blue-500');icon.className='fas fa-info-circle text-blue-500 text-xl';}
-    toast.classList.remove('hidden');setTimeout(()=>toast.classList.remove('translate-y-10','opacity-0'),10);
-    setTimeout(()=>{toast.classList.add('translate-y-10','opacity-0');setTimeout(()=>toast.classList.add('hidden'),300);},4000);
+function escapeHtml(text) { if (!text) return 'N/A'; const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+
+function showToast(title, message, type = 'success') {
+    const toast = document.getElementById('toast');
+    const content = document.getElementById('toastContent');
+    const icon = document.getElementById('toastIcon');
+    document.getElementById('toastTitle').textContent = title;
+    document.getElementById('toastMessage').textContent = message;
+    content.className = 'bg-white border-l-4 shadow-xl rounded-lg p-4 flex items-center gap-3 min-w-[300px]';
+    if (type === 'success') { content.classList.add('border-green-500'); icon.className = 'fas fa-check-circle text-green-500 text-xl'; }
+    else if (type === 'error') { content.classList.add('border-red-500'); icon.className = 'fas fa-exclamation-circle text-red-500 text-xl'; }
+    else { content.classList.add('border-blue-500'); icon.className = 'fas fa-info-circle text-blue-500 text-xl'; }
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
+    setTimeout(() => { toast.classList.add('translate-y-10', 'opacity-0'); setTimeout(() => toast.classList.add('hidden'), 300); }, 4000);
 }
 </script>
 </body>
