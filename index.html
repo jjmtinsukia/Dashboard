@@ -2234,7 +2234,7 @@ ${schemesHTML}
 
 <!-- =============================================
  "What if Sumit Sir wants to know !!"  Feature
- (COMPLETE – all reports included)
+ (COMPLETE – all reports + Overdue Tasks)
  ============================================= -->
 <style>
 @keyframes popTitle {
@@ -2299,7 +2299,7 @@ const officerSubDivisionMap = {
 };
 
 // ==========================================
-// CREATE MODAL HTML
+// CREATE MODAL HTML (new Overdue option added)
 // ==========================================
 (function createQuickReportModal() {
   const modalHTML = `
@@ -2331,6 +2331,9 @@ const officerSubDivisionMap = {
                 <option value="tasksDueWeekByWeek">Tasks Due Week‑By‑Week per Section Officer</option>
                 <option value="componentWise">Component‑Wise Progress</option>
                 <option value="tasksDueWeekByWeekScheme">Tasks Due Week‑By‑Week per Scheme</option>
+                <option value="ganttChartScheme">Gantt Chart – Scheme</option>
+                <option value="ganttChartOfficer">Gantt Chart – Section Officer</option>
+                <option value="overdueTasks">List of Overdue Tasks</option>
                 <option value="bestWorstContractors">Performance - Contractors</option>
                 <option value="bestWorstOfficers">Performance - Section Officers</option>
               </select>
@@ -2435,6 +2438,9 @@ function generateQuickReport() {
       case 'monthWiseTasks': html = generateMonthWiseTasks(); break;
       case 'componentWise': html = generateComponentWise(); break;
       case 'tasksDueWeekByWeekScheme': html = generateTasksDueWeekByWeekScheme(); break;
+      case 'ganttChartScheme': html = generateGanttChartScheme(); break;
+      case 'ganttChartOfficer': html = generateGanttChartOfficer(); break;
+      case 'overdueTasks': html = generateOverdueTasks(); break;
       case 'bestWorstContractors': html = generateBestWorstContractors(); break;
       case 'bestWorstOfficers': html = generateBestWorstOfficers(); break;
       default: html = '<p class="text-gray-500">Unknown report type.</p>';
@@ -2447,7 +2453,7 @@ function generateQuickReport() {
 }
 
 // ==========================================
-// ALL REPORTS GENERATOR
+// ALL REPORTS GENERATOR (Overdue included)
 // ==========================================
 function generateAllReports() {
   return `
@@ -2462,6 +2468,12 @@ function generateAllReports() {
     <div style="page-break-after: always;">${generateComponentWise()}</div>
     <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
     <div style="page-break-after: always;">${generateTasksDueWeekByWeekScheme()}</div>
+    <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
+    <div style="page-break-after: always;">${generateGanttChartScheme()}</div>
+    <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
+    <div style="page-break-after: always;">${generateGanttChartOfficer()}</div>
+    <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
+    <div style="page-break-after: always;">${generateOverdueTasks()}</div>
     <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
     <div style="page-break-after: always;">${generateBestWorstContractors()}</div>
     <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
@@ -2895,7 +2907,7 @@ function generateMonthWiseTasks() {
   `;
 }
 
-// 9. Tasks Due Week‑By‑Week per Scheme (NEW)
+// 9. Tasks Due Week‑By‑Week per Scheme
 function generateTasksDueWeekByWeekScheme() {
   const { schemes, rawData } = getFilteredData();
   const today = state.reportDate || new Date();
@@ -2915,8 +2927,6 @@ function generateTasksDueWeekByWeekScheme() {
   schemes.forEach(s => {
     schemeMap[s.scheme_id] = {
       name: s.scheme_name,
-      contractor: s.contractor,
-      officer: s.section_officer,
       counts: weeks.map(() => 0)
     };
   });
@@ -2971,6 +2981,157 @@ function generateTasksDueWeekByWeekScheme() {
   `;
 }
 
+// 10. Gantt Chart – Scheme (sorted by due date)
+function generateGanttChartScheme() {
+  const { schemes } = getFilteredData();
+  const sortedSchemes = [...schemes].sort((a, b) => {
+    if (!a.latestDueDate && !b.latestDueDate) return 0;
+    if (!a.latestDueDate) return 1;
+    if (!b.latestDueDate) return -1;
+    return a.latestDueDate - b.latestDueDate;
+  });
+
+  const months = [
+    { label: 'Jun', month: 5 },
+    { label: 'Jul', month: 6 },
+    { label: 'Aug', month: 7 },
+    { label: 'Sep', month: 8 }
+  ];
+
+  let headerRow = '<th class="px-3 py-2 text-left align-top border">Scheme</th>';
+  months.forEach(m => headerRow += `<th class="px-3 py-2 text-center align-top border">${m.label}</th>`);
+
+  let bodyRows = '';
+  sortedSchemes.forEach(s => {
+    let row = `<td class="px-3 py-2 font-medium border">${escapeHtml(s.scheme_name)}</td>`;
+    months.forEach(m => {
+      let marker = '';
+      if (s.latestDueDate && s.latestDueDate.getMonth() === m.month && s.latestDueDate.getFullYear() === 2026) {
+        marker = '<span style="display:inline-block; width:12px; height:12px; background:#4caf50; border-radius:50%;"></span>';
+      }
+      row += `<td class="px-3 py-2 text-center border">${marker}</td>`;
+    });
+    bodyRows += `<tr>${row}</tr>`;
+  });
+
+  return `
+    <h3 class="text-lg font-bold mb-2 text-center">Gantt Chart – Scheme Due Month</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border border-gray-300">
+        <thead class="bg-gray-100"><tr>${headerRow}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>
+    <p class="text-xs text-gray-500 mt-1">● Green circle indicates the scheme's final due date falls in that month. Sorted by earliest due date.</p>
+  `;
+}
+
+// 11. Gantt Chart – Section Officer (sorted by due date)
+function generateGanttChartOfficer() {
+  const { schemes } = getFilteredData();
+  const sortedSchemes = [...schemes].sort((a, b) => {
+    if (!a.latestDueDate && !b.latestDueDate) return 0;
+    if (!a.latestDueDate) return 1;
+    if (!b.latestDueDate) return -1;
+    return a.latestDueDate - b.latestDueDate;
+  });
+
+  const officerGroups = {};
+  sortedSchemes.forEach(s => {
+    const officer = s.section_officer || 'N/A';
+    if (!officerGroups[officer]) officerGroups[officer] = [];
+    officerGroups[officer].push(s);
+  });
+
+  const months = [
+    { label: 'Jun', month: 5 },
+    { label: 'Jul', month: 6 },
+    { label: 'Aug', month: 7 },
+    { label: 'Sep', month: 8 }
+  ];
+
+  let headerRow = '<th class="px-3 py-2 text-left align-top border">Section Officer / Scheme</th>';
+  months.forEach(m => headerRow += `<th class="px-3 py-2 text-center align-top border">${m.label}</th>`);
+
+  let bodyRows = '';
+  Object.keys(officerGroups).sort().forEach(officer => {
+    bodyRows += `<tr style="background: #f9f9f9; font-weight: bold;"><td class="px-3 py-2 border" colspan="5">${escapeHtml(officer)}</td></tr>`;
+    officerGroups[officer].forEach(s => {
+      let row = `<td class="px-3 py-2 pl-6 font-medium border">${escapeHtml(s.scheme_name)}</td>`;
+      months.forEach(m => {
+        let marker = '';
+        if (s.latestDueDate && s.latestDueDate.getMonth() === m.month && s.latestDueDate.getFullYear() === 2026) {
+          marker = '<span style="display:inline-block; width:12px; height:12px; background:#4caf50; border-radius:50%;"></span>';
+        }
+        row += `<td class="px-3 py-2 text-center border">${marker}</td>`;
+      });
+      bodyRows += `<tr>${row}</tr>`;
+    });
+  });
+
+  return `
+    <h3 class="text-lg font-bold mb-2 text-center">Gantt Chart – Section Officer / Scheme Due Month</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border border-gray-300">
+        <thead class="bg-gray-100"><tr>${headerRow}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>
+    <p class="text-xs text-gray-500 mt-1">● Green circle indicates the scheme's final due date falls in that month. Sorted by earliest due date.</p>
+  `;
+}
+
+// 12. List of Overdue Tasks (new)
+function generateOverdueTasks() {
+  const { rawData } = getFilteredData();
+  const today = state.reportDate || new Date();
+  // Filter tasks that are past their due date and not 100% complete
+  const overdueTasks = rawData.filter(task => {
+    return task.parsedDate && task.parsedDate < today && task.completion < 100;
+  });
+
+  // Sort by most overdue first (largest negative days)
+  overdueTasks.sort((a, b) => a.parsedDate - b.parsedDate);
+
+  let rows = '';
+  overdueTasks.forEach((task, idx) => {
+    // Find scheme info
+    const scheme = state.schemes.find(s => s.scheme_id === task.scheme_id);
+    const schemeName = scheme ? scheme.scheme_name : task.scheme_id;
+    const contractorName = scheme ? scheme.contractor : 'N/A';
+    const overdueDays = Math.ceil((today - task.parsedDate) / (1000 * 60 * 60 * 24));
+    rows += `<tr>
+      <td class="px-3 py-2 text-center border">${idx + 1}</td>
+      <td class="px-3 py-2 border">${escapeHtml(schemeName)}</td>
+      <td class="px-3 py-2 border">${escapeHtml(contractorName)}</td>
+      <td class="px-3 py-2 border">${escapeHtml(task.component)}</td>
+      <td class="px-3 py-2 border">${escapeHtml(task.task)}</td>
+      <td class="px-3 py-2 text-center border">${overdueDays} day${overdueDays !== 1 ? 's' : ''}</td>
+    </tr>`;
+  });
+
+  return `
+    <h3 class="text-lg font-bold mb-2 text-center">List of Overdue Tasks</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border border-gray-300">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="px-3 py-2 text-center align-top border">SL No.</th>
+            <th class="px-3 py-2 text-left align-top border">Scheme Name</th>
+            <th class="px-3 py-2 text-left align-top border">Contractor Name</th>
+            <th class="px-3 py-2 text-left align-top border">Component</th>
+            <th class="px-3 py-2 text-left align-top border">Task</th>
+            <th class="px-3 py-2 text-center align-top border">Overdue by</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows || '<tr><td colspan="6" class="px-3 py-2 text-center border">No overdue tasks found.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 // Toggle deadline details
 function toggleDeadlineDetail(catId) {
   const detailDiv = document.getElementById(catId);
@@ -3019,4 +3180,5 @@ function printQuickReport() {
   printWindow.document.close();
   setTimeout(() => printWindow.print(), 500);
 }
+</script>
 </script>
