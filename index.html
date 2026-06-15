@@ -1132,23 +1132,35 @@ async function saveProgressAndSync(schemeId) {
     }
 
     if (updates.length > 0) {
-        showToast('Saving...', `Updating ${updates.length} task(s) in the spreadsheet...`, 'info');
-        try {
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ updates })
-            });
-            updates.forEach(u => {
-                state.originalCompletion[u.scheme_id + '|' + u.component + '|' + u.task] = u.completion;
-            });
-            showToast('Saved', 'Progress saved locally and updated in the spreadsheet.', 'success');
-        } catch (error) {
-            console.error('Sheet update failed', error);
-            showToast('Partial Save', 'Local progress saved, but spreadsheet update failed.', 'error');
+    showToast('Saving...', `Updating ${updates.length} task(s) in the spreadsheet...`, 'info');
+    try {
+        const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ updates })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Server error ${response.status}: ${errText}`);
         }
-    } else {
+
+        const result = await response.json();
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        // Update originalCompletion values so they won't be re-sent
+        updates.forEach(u => {
+            state.originalCompletion[u.scheme_id + '|' + u.component + '|' + u.task] = u.completion;
+        });
+
+        showToast('Saved', `Progress saved and updated in the spreadsheet (${result.updatesApplied || updates.length} tasks).`, 'success');
+    } catch (error) {
+        console.error('Sheet update failed', error);
+        showToast('Save Failed', error.message, 'error');
+    }
+} else {
         showToast('Saved Locally', 'Progress saved (no changes needed for the spreadsheet).', 'success');
     }
 
