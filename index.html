@@ -4,10 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JJM 2.0 Scheme Monitoring Dashboard</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.tailwindcss.com">
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js">
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js">
+</script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+</script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style id="print-page-style">
     /* Dynamic print page size rules will be inserted here */
@@ -35,7 +39,15 @@
         animation: pop 2s infinite;
         box-shadow: 0 0 12px rgba(147, 51, 234, 0.6);
     }
+    .btn-popping-green {
+        animation: popGreen 2s infinite;
+        box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+    }
     @keyframes pop {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.08); }
+    }
+    @keyframes popGreen {
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.08); }
     }
@@ -261,6 +273,10 @@
             <button onclick="openReportPreview()" class="px-4 py-2 text-sm bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium transition-colors flex items-center">
                 <i class="fas fa-print mr-2"></i> Print report
             </button>
+            <!-- NEW: Progress Monitor Button (highlighted + popping) -->
+            <a href="https://script.google.com/macros/s/AKfycbzNWVsHD11Da47rf4gOGUEztxII6fWZjJrn4MO_yvUiJhKI_rZniIqZq5NHL6ApZ_n5/exec?page=progress" target="_blank" class="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium transition-all flex items-center shadow-lg btn-popping-green">
+                <i class="fas fa-chart-line mr-2"></i> <span class="hidden sm:inline">Progress Monitor</span>
+            </a>
             <a href="https://script.google.com/macros/s/AKfycbzNWVsHD11Da47rf4gOGUEztxII6fWZjJrn4MO_yvUiJhKI_rZniIqZq5NHL6ApZ_n5/exec" target="_blank" class="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-all flex items-center shadow-lg btn-popping">
                 <i class="fas fa-diagram-project mr-2"></i> <span class="hidden sm:inline">Create Schematic Timelines</span>
             </a>
@@ -567,7 +583,6 @@
                     <i class="fas fa-file-alt text-blue-700"></i> Abstract Report — Preview
                 </h2>
                 <div class="flex items-center gap-4 flex-wrap">
-                    <!-- New filters: Section Officer & Sub Division -->
                     <div class="flex items-center gap-2">
                         <label for="reportOfficerFilter" class="text-xs text-gray-600 font-medium">Section Officer:</label>
                         <select id="reportOfficerFilter" class="border border-gray-300 rounded px-2 py-1 text-xs">
@@ -742,7 +757,6 @@ async function loadContractorData() {
                     }
                 });
                 state.contractorMap = map;
-                // Populate sub division dropdown for report if report modal is open
                 populateReportSubDivisionDropdown();
             }
         });
@@ -1150,7 +1164,6 @@ async function saveProgressAndSync(schemeId) {
             throw new Error(result.error);
         }
 
-        // Update originalCompletion values so they won't be re-sent
         updates.forEach(u => {
             state.originalCompletion[u.scheme_id + '|' + u.component + '|' + u.task] = u.completion;
         });
@@ -1324,7 +1337,6 @@ function updateWRNPreview() {
 
     const content = `
         <div style="font-family: 'Times New Roman', Times, serif; line-height: 1.6; font-size: 12pt;">
-            <!-- Government Header -->
             <div style="text-align: center; margin-bottom: 4mm;">
                 <div style="font-weight: bold; font-size: 14pt;">GOVERNMENT OF ASSAM</div>
                 <div style="font-weight: bold; font-size: 13pt;">OFFICE OF THE EXECUTIVE ENGINEER (PHE) TINSUKIA DIVISION,</div>
@@ -1359,7 +1371,6 @@ function updateWRNPreview() {
             </ul>
             <p style="text-align: justify; font-weight: bold;">This may be treated as MOST URGENT.</p>
 
-            <!-- Signature block aligned right -->
             <div style="text-align: right; margin-top: 12mm;">
                 <p style="margin: 0;">Yours faithfully,</p>
                 <p style="margin: 0; margin-top: 8mm;"><strong>Executive Engineer (PHE)</strong></p>
@@ -1374,7 +1385,6 @@ function updateWRNPreview() {
                 <li>Office Copy.</li>
             </ol>
 
-            <!-- Second right-aligned designation -->
             <div style="text-align: right; margin-top: 8mm;">
                 <p style="margin: 0;"><strong>Executive Engineer (PHE)</strong></p>
                 <p style="margin: 0;">${escapeHtml(division)}</p>
@@ -1389,16 +1399,6 @@ function printWRN() {
     document.getElementById('wrnModal').offsetHeight;
     window.print();
     window.onafterprint = () => document.body.classList.remove('printing-wrn');
-}
-
-function updateWRNMargins() {
-    const t = Math.max(5, Math.min(50, parseInt(document.getElementById('wrnMarginTop').value) || 20));
-    const b = Math.max(5, Math.min(50, parseInt(document.getElementById('wrnMarginBottom').value) || 20));
-    const l = Math.max(5, Math.min(50, parseInt(document.getElementById('wrnMarginLeft').value) || 20));
-    const r = Math.max(5, Math.min(50, parseInt(document.getElementById('wrnMarginRight').value) || 20));
-    document.getElementById('wrnPreview').style.padding = `${t}mm ${r}mm ${b}mm ${l}mm`;
-    document.getElementById('wrnPreview').style.minHeight = `${297 - t - b}mm`;
-    updatePrintMargins('wrn');
 }
 
 // ==========================================
@@ -1489,7 +1489,6 @@ function openReportPreview() {
     if (!state.schemes.length) { showToast('No Data', 'Please load data first.', 'error'); return; }
     populateReportOfficerDropdown();
     populateReportSubDivisionDropdown();
-    // Reset dropdowns to "All"
     document.getElementById('reportOfficerFilter').value = '';
     document.getElementById('reportSubDivisionFilter').value = '';
     regenerateReport();
@@ -1504,7 +1503,6 @@ function regenerateReport() {
 }
 
 function generateReportContent(officer = null, subDivision = null) {
-    // Filter raw data
     let filteredRaw = state.rawData;
     if (officer) {
         filteredRaw = filteredRaw.filter(r => r.section_officer === officer);
@@ -1530,7 +1528,6 @@ function generateReportContent(officer = null, subDivision = null) {
     const avgCompletion = totalSchemes ? (schemes.reduce((s,x) => s + x.avg_completion, 0) / totalSchemes).toFixed(1) : '0';
     const totalCompletedSchemes = schemes.filter(s => s.allTasksCompleted).length;
 
-    // Contractor-wise
     const uniqueContractors = [...new Set(schemes.map(s => s.contractor))].sort();
     const contractorSerial = {};
     uniqueContractors.forEach((c, idx) => { contractorSerial[c] = idx + 1; });
@@ -1551,7 +1548,6 @@ function generateReportContent(officer = null, subDivision = null) {
         </tr>`;
     });
 
-    // Component-wise
     const componentMap = {};
     filteredRaw.forEach(t => {
         const comp = t.component || 'N/A';
@@ -1576,7 +1572,6 @@ function generateReportContent(officer = null, subDivision = null) {
         </tr>`;
     }
 
-    // Officer-wise
     const officerMap = {};
     schemes.forEach(s => {
         const off = s.section_officer || 'N/A';
@@ -1602,7 +1597,6 @@ function generateReportContent(officer = null, subDivision = null) {
         </tr>`;
     }
 
-    // Scheme-wise
     const schemesSorted = [...schemes].sort((a,b) => a.section_officer.localeCompare(b.section_officer));
     let schemeRows = '';
     schemesSorted.forEach(s => {
@@ -1620,7 +1614,6 @@ function generateReportContent(officer = null, subDivision = null) {
         </tr>`;
     });
 
-    // Completion Timeline
     const timelineSchemes = schemes.filter(s => s.latestDueDate).sort((a,b) => a.latestDueDate - b.latestDueDate);
     let timelineRows = '';
     timelineSchemes.forEach(s => {
@@ -1634,7 +1627,6 @@ function generateReportContent(officer = null, subDivision = null) {
         </tr>`;
     });
 
-    // Month‑wise
     const monthWise = {};
     schemes.forEach(s => {
         if (!s.latestDueDate) return;
@@ -1654,7 +1646,6 @@ function generateReportContent(officer = null, subDivision = null) {
         </tr>`;
     });
 
-    // Delay Analysis
     const overdue = filteredRaw.filter(t => t.parsedDate && t.parsedDate < state.reportDate && t.completion < 100).sort((a,b) => a.parsedDate - b.parsedDate);
     let delayRows = overdue.length ? '' : '<tr><td colspan="6">No overdue tasks</td></tr>';
     overdue.forEach(t => {
@@ -1668,7 +1659,6 @@ function generateReportContent(officer = null, subDivision = null) {
         </tr>`;
     });
 
-    // Risk Matrix
     const riskSchemes = schemes.filter(s => s.critical > 0 && s.avg_completion < 50).sort((a,b) => b.critical - a.critical);
     let riskRows = riskSchemes.length ? '' : '<tr><td colspan="6">No high-risk schemes</td></tr>';
     riskSchemes.forEach(s => {
@@ -1682,7 +1672,6 @@ function generateReportContent(officer = null, subDivision = null) {
         </tr>`;
     });
 
-    // Critical tasks
     let criticalList = '';
     schemes.filter(s => s.scnTriggered).forEach(s => {
         s.scnTasks.forEach(t => criticalList += `<li>${escapeHtml(s.scheme_id)} – ${escapeHtml(t.component)}: ${escapeHtml(t.task)} (${t.completion}%, ${t.daysRemaining}d)</li>`);
@@ -1749,7 +1738,7 @@ function closeReportModal() {
 }
 
 // ==========================================
-// EXPORT ABSTRACT REPORT XLSX (unchanged)
+// EXPORT ABSTRACT REPORT XLSX
 // ==========================================
 function exportAbstractReportXLSX() {
     if (state.schemes.length === 0) {
@@ -1761,14 +1750,12 @@ function exportAbstractReportXLSX() {
     const dateStr = formatDate(state.reportDate);
     const reportDateISO = formatDateISO(state.reportDate);
 
-    // Helper
     function addSheet(sheetName, headers, rows) {
         const data = [headers, ...rows];
         const ws = XLSX.utils.aoa_to_sheet(data);
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
     }
 
-    // 1. Executive Summary
     const totalSchemes = state.schemes.length;
     const totalCompletedSchemes = state.schemes.filter(s => s.allTasksCompleted).length;
     const totalTasks = state.schemes.reduce((sum, s) => sum + s.tasks, 0);
@@ -1791,7 +1778,6 @@ function exportAbstractReportXLSX() {
         ]
     );
 
-    // 2. Contractor-wise
     const contractorSchemes = [...state.schemes].sort((a, b) => a.contractor.localeCompare(b.contractor));
     const contractorRows = contractorSchemes.map((s, idx) => [
         idx + 1,
@@ -1808,7 +1794,6 @@ function exportAbstractReportXLSX() {
         contractorRows
     );
 
-    // 3. Component-wise
     const componentMap = {};
     state.rawData.forEach(r => {
         const comp = r.component || 'N/A';
@@ -1833,7 +1818,6 @@ function exportAbstractReportXLSX() {
         componentRows
     );
 
-    // 4. Officer-wise
     const officerMap = {};
     state.schemes.forEach(s => {
         const off = s.section_officer || 'N/A';
@@ -1859,8 +1843,7 @@ function exportAbstractReportXLSX() {
         officerRows
     );
 
-    // 5. Scheme-wise
-    const schemeRows = [...state.schemes]
+    const schemeRowsExport = [...state.schemes]
         .sort((a, b) => a.section_officer.localeCompare(b.section_officer))
         .map(s => [
             s.scheme_id,
@@ -1876,14 +1859,13 @@ function exportAbstractReportXLSX() {
         ]);
     addSheet('Scheme-wise',
         ['ID', 'Name', 'Officer', 'Contractor', 'Tasks', '%', 'Critical', 'Upcoming', 'Scheduled', 'SCN'],
-        schemeRows
+        schemeRowsExport
     );
 
-    // 6. Completion Timeline
     const timelineSchemes = state.schemes
         .filter(s => s.latestDueDate)
         .sort((a, b) => a.latestDueDate - b.latestDueDate);
-    const timelineRows = timelineSchemes.map(s => [
+    const timelineRowsExport = timelineSchemes.map(s => [
         s.scheme_id,
         s.scheme_name || 'N/A',
         s.section_officer || 'N/A',
@@ -1893,10 +1875,9 @@ function exportAbstractReportXLSX() {
     ]);
     addSheet('Completion Timeline',
         ['ID', 'Name', 'Officer', 'Final Due', '%', 'Status'],
-        timelineRows
+        timelineRowsExport
     );
 
-    // 7. Month-wise Target vs Achievement
     const monthWise = {};
     state.schemes.forEach(s => {
         if (!s.latestDueDate) return;
@@ -1905,7 +1886,7 @@ function exportAbstractReportXLSX() {
         monthWise[key].schemes++;
         monthWise[key].totalComp += s.avg_completion;
     });
-    const monthTargetRows = Object.keys(monthWise)
+    const monthTargetRowsExport = Object.keys(monthWise)
         .sort()
         .map(month => [
             month,
@@ -1915,14 +1896,13 @@ function exportAbstractReportXLSX() {
         ]);
     addSheet('Month-wise Target',
         ['Month', 'Schemes', 'Target', 'Actual'],
-        monthTargetRows
+        monthTargetRowsExport
     );
 
-    // 8. Delay Analysis
     const overdue = state.rawData
         .filter(r => r.parsedDate && r.parsedDate < state.reportDate && r.completion < 100)
         .sort((a, b) => a.parsedDate - b.parsedDate);
-    const delayRows = overdue.length > 0
+    const delayRowsExport = overdue.length > 0
         ? overdue.map(r => [
             r.scheme_id,
             r.component || 'N/A',
@@ -1934,14 +1914,13 @@ function exportAbstractReportXLSX() {
         : [['No overdue tasks', '', '', '', '', '']];
     addSheet('Delay Analysis',
         ['Scheme ID', 'Component', 'Task', 'Due Date', 'Completion %', 'Overdue'],
-        delayRows
+        delayRowsExport
     );
 
-    // 9. Risk Matrix
     const riskSchemes = state.schemes
         .filter(s => s.critical > 0 && s.avg_completion < 50)
         .sort((a, b) => b.critical - a.critical);
-    const riskRows = riskSchemes.length > 0
+    const riskRowsExport = riskSchemes.length > 0
         ? riskSchemes.map(s => [
             s.scheme_id,
             s.scheme_name || 'N/A',
@@ -1953,14 +1932,13 @@ function exportAbstractReportXLSX() {
         : [['No high-risk schemes', '', '', '', '', '']];
     addSheet('Risk Matrix',
         ['ID', 'Name', 'Officer', 'Critical', 'Avg %', 'Risk Level'],
-        riskRows
+        riskRowsExport
     );
 
-    // 10. Critical Tasks
-    let criticalRows = [];
+    let criticalRowsExport = [];
     state.schemes.forEach(s => {
         if (s.scnTriggered) {
-            s.scnTasks.forEach(t => criticalRows.push([
+            s.scnTasks.forEach(t => criticalRowsExport.push([
                 s.scheme_id,
                 t.component,
                 t.task,
@@ -1970,24 +1948,38 @@ function exportAbstractReportXLSX() {
             ]));
         }
     });
-    if (criticalRows.length === 0) criticalRows = [['None', '', '', '', '', '']];
+    if (criticalRowsExport.length === 0) criticalRowsExport = [['None', '', '', '', '', '']];
     addSheet('Critical Tasks',
         ['Scheme ID', 'Component', 'Task', 'Due Date', 'Completion %', 'Days Remaining'],
-        criticalRows
+        criticalRowsExport
     );
 
     XLSX.writeFile(wb, `abstract_report_${reportDateISO}.xlsx`);
 }
 
 // ==========================================
-// EXPORT TO CSV (unchanged)
+// EXPORT TO CSV
 // ==========================================
 function exportToCSV() {
-    // ... (same as original)
+    if (state.filtered.length === 0) {
+        showToast('No Data', 'Nothing to export.', 'error');
+        return;
+    }
+    const rows = [];
+    rows.push(['Scheme ID','Scheme Name','Section Officer','Contractor','Tasks','Avg Completion %','Critical','Upcoming','Scheduled','SCN Triggered']);
+    state.filtered.forEach(s => {
+        rows.push([s.scheme_id, s.scheme_name, s.section_officer, s.contractor, s.tasks, s.avg_completion + '%', s.critical, s.upcoming, s.scheduled, s.scnTriggered ? 'Yes' : 'No']);
+    });
+    const csvContent = rows.map(r => r.map(c => '"' + (c + '').replace(/"/g, '""') + '"').join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `scheme_data_${formatDateISO(state.reportDate)}.csv`;
+    link.click();
 }
 
 // ==========================================
-// PAGINATION, SORTING, FILTERS, TABLE (unchanged)
+// PAGINATION, SORTING, FILTERS, TABLE
 // ==========================================
 function toggleFilters() { const p = document.getElementById('filterPanel'); p.style.display = p.style.display === 'none' ? 'flex' : 'none'; }
 function populateFilters() {
@@ -2141,17 +2133,14 @@ function showToast(title, message, type = 'success') {
     setTimeout(() => { toast.classList.add('translate-y-10', 'opacity-0'); setTimeout(() => toast.classList.add('hidden'), 300); }, 4000);
 }
 </script>
-</body>
-</html>
 
+<!-- ===== IMIS DATA INTEGRATION & ROADMAP ===== -->
 <script>
 (function() {
-    // ===================== IMIS DATA INTEGRATION =====================
     const IMIS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTZnZvA5Z9rKm18OYDe008BRBVLTzifwam0qkcnm0L1n4ejcQgEoiPCel4TqQvDn2cE3xvV68G2psBi/pub?gid=2125980002&single=true&output=csv';
     let imisProgressMap = {};
     let imisLoaded = false;
 
-    // Override aggregateSchemes to inject IMIS progress into each scheme
     const originalAggregateSchemes = aggregateSchemes;
     aggregateSchemes = function() {
         originalAggregateSchemes();
@@ -2186,7 +2175,6 @@ function showToast(title, message, type = 'success') {
             .catch(err => console.warn('IMIS data load failed', err));
     }
 
-    // ===================== INIT & BUTTON =====================
     const originalInitDashboard = initDashboard;
     initDashboard = function() {
         originalInitDashboard();
@@ -2209,7 +2197,6 @@ function showToast(title, message, type = 'success') {
         }
     }
 
-    // ===================== ROADMAP MODAL =====================
     function createRoadmapModal() {
         const modalHTML = `
         <div id="roadmapModal" class="fixed inset-0 z-50 hidden modal-backdrop overflow-y-auto">
@@ -2276,7 +2263,6 @@ function showToast(title, message, type = 'success') {
             return;
         }
 
-        // Build data for each scheme
         const schemesData = officerSchemes.map(scheme => {
             const tasks = state.rawData.filter(r => r.scheme_id === scheme.scheme_id);
             const ganttLabels = tasks.map(t => `${t.component}: ${t.task}`);
@@ -2304,7 +2290,6 @@ function showToast(title, message, type = 'success') {
             };
         });
 
-        // Build HTML for each scheme page
         let schemesHTML = '';
         schemesData.forEach(s => {
             const taskRows = s.tasks.map(t =>
@@ -2402,7 +2387,6 @@ ${schemesHTML}
         printWindow.document.close();
     }
 
-    // ===================== INJECT IMIS INTO SCHEME DETAIL =====================
     const originalViewScheme = viewScheme;
     viewScheme = function(schemeId) {
         originalViewScheme(schemeId);
@@ -2415,7 +2399,6 @@ ${schemesHTML}
         const imisVal = scheme.imisProgress || 'N/A';
         const imisText = imisVal !== 'N/A' ? imisVal + '%' : 'N/A';
 
-        // Screen view – add a row in the info grid
         const screenGrid = document.querySelector('#schemeDetailContent .bg-gray-50.rounded-lg.p-4.mb-6.border.border-gray-200.screen-only');
         if (screenGrid && !screenGrid.querySelector('.imis-progress-row')) {
             const row = document.createElement('div');
@@ -2424,7 +2407,6 @@ ${schemesHTML}
             screenGrid.appendChild(row);
         }
 
-        // Print view – add a row to the scheme-info table
         const printTable = document.querySelector('#schemeDetailContent .scheme-info.print-only');
         if (printTable && !printTable.querySelector('.imis-progress-print')) {
             const row = document.createElement('tr');
@@ -2435,3 +2417,5 @@ ${schemesHTML}
     }
 })();
 </script>
+</body>
+</html>
