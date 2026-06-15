@@ -2234,7 +2234,7 @@ ${schemesHTML}
 
 <!-- =============================================
  "What if Sumit Sir wants to know !!"  Feature
- (Sub‑Division filter based on Section Officers)
+ (COMPLETE – all reports included)
  ============================================= -->
 <style>
 @keyframes popTitle {
@@ -2257,22 +2257,19 @@ ${schemesHTML}
 
 <script>
 // ==========================================
-// ADD BUTTON TO HEADER
+// ADD BUTTON NEXT TO "Download Schematic Roadmap"
 // ==========================================
 (function addQuickReportButton() {
-  const headerDiv = document.querySelector('header .flex.items-center.gap-4');
-  if (!headerDiv) return;
+  const roadmapContainer = document.getElementById('btnRoadmapDownload')?.parentNode;
+  if (!roadmapContainer) return;
+
   const btn = document.createElement('button');
   btn.id = 'btnQuickReports';
-  btn.className = 'px-4 py-2 text-sm bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 font-medium transition-colors flex items-center shadow-md';
+  btn.className = 'ml-4 px-4 py-2 text-sm bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 font-medium transition-colors flex items-center shadow-md';
   btn.innerHTML = '<i class="fas fa-lightbulb mr-2"></i> Quick Reports';
   btn.addEventListener('click', openQuickReportModal);
-  const roadmapBtn = document.getElementById('btnRoadmapDownload');
-  if (roadmapBtn && roadmapBtn.parentNode) {
-    roadmapBtn.parentNode.insertBefore(btn, roadmapBtn.nextSibling);
-  } else {
-    headerDiv.appendChild(btn);
-  }
+  
+  roadmapContainer.appendChild(btn);
 })();
 
 // ==========================================
@@ -2333,6 +2330,7 @@ const officerSubDivisionMap = {
                 <option value="monthWiseTasks">Month‑Wise Target vs Achievement (Tasks)</option>
                 <option value="tasksDueWeekByWeek">Tasks Due Week‑By‑Week per Section Officer</option>
                 <option value="componentWise">Component‑Wise Progress</option>
+                <option value="tasksDueWeekByWeekScheme">Tasks Due Week‑By‑Week per Scheme</option>
                 <option value="bestWorstContractors">Performance - Contractors</option>
                 <option value="bestWorstOfficers">Performance - Section Officers</option>
               </select>
@@ -2341,7 +2339,6 @@ const officerSubDivisionMap = {
               </div>
             </div>
 
-            <!-- Sub‑Division Filter -->
             <label class="text-xs font-bold text-gray-700 uppercase ml-4">Sub‑Division</label>
             <div class="relative w-full sm:w-auto">
               <select id="quickReportSubDivision" class="appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm" onchange="generateQuickReport()">
@@ -2381,14 +2378,13 @@ function closeQuickReportModal() {
 }
 
 // ==========================================
-// UTILITY: GET FILTERED DATA (by Section Officer's Sub‑Division)
+// UTILITY: GET FILTERED DATA
 // ==========================================
 function getFilteredData() {
   const subDivision = document.getElementById('quickReportSubDivision').value;
   if (!subDivision) {
     return { schemes: state.schemes, rawData: state.rawData };
   }
-  // Filter schemes where the Section Officer belongs to the selected sub-division
   const filteredSchemes = state.schemes.filter(s => {
     const officer = s.section_officer;
     return officerSubDivisionMap[officer] === subDivision;
@@ -2438,6 +2434,7 @@ function generateQuickReport() {
       case 'monthWiseSchemes': html = generateMonthWiseSchemes(); break;
       case 'monthWiseTasks': html = generateMonthWiseTasks(); break;
       case 'componentWise': html = generateComponentWise(); break;
+      case 'tasksDueWeekByWeekScheme': html = generateTasksDueWeekByWeekScheme(); break;
       case 'bestWorstContractors': html = generateBestWorstContractors(); break;
       case 'bestWorstOfficers': html = generateBestWorstOfficers(); break;
       default: html = '<p class="text-gray-500">Unknown report type.</p>';
@@ -2463,6 +2460,8 @@ function generateAllReports() {
     <div style="page-break-after: always;">${generateMonthWiseTasks()}</div>
     <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
     <div style="page-break-after: always;">${generateComponentWise()}</div>
+    <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
+    <div style="page-break-after: always;">${generateTasksDueWeekByWeekScheme()}</div>
     <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
     <div style="page-break-after: always;">${generateBestWorstContractors()}</div>
     <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
@@ -2494,8 +2493,10 @@ function wrapReport(content) {
 }
 
 // ==========================================
-// ALL REPORT FUNCTIONS (identical logic, unchanged)
+// ALL REPORT FUNCTIONS – FULLY DEFINED
 // ==========================================
+
+// 1. Schemes by Deadline
 function generateSchemesByDeadline() {
   const { schemes } = getFilteredData();
   const deadline1 = new Date(2026, 7, 15);
@@ -2559,8 +2560,8 @@ function generateSchemesByDeadline() {
           </tr>
         </thead>
         <tbody>
-          ${renderCategory('By 15 August 2026', cat1, 'cat1')}
-          ${renderCategory('By 16 September 2026 (after 15 Aug)', cat2, 'cat2')}
+          ${renderCategory('By 15 August 2026 (on or before)', cat1, 'cat1')}
+          ${renderCategory('16 August 2026 – 15 September 2026', cat2, 'cat2')}
           ${renderCategory('After 16 September 2026', cat3, 'cat3')}
         </tbody>
       </table>
@@ -2568,6 +2569,7 @@ function generateSchemesByDeadline() {
   `;
 }
 
+// 2. Performance - Contractors
 function generateBestWorstContractors() {
   const { schemes } = getFilteredData();
   const map = {};
@@ -2629,6 +2631,7 @@ function generateBestWorstContractors() {
   `;
 }
 
+// 3. Performance - Section Officers
 function generateBestWorstOfficers() {
   const { schemes } = getFilteredData();
   const map = {};
@@ -2690,6 +2693,7 @@ function generateBestWorstOfficers() {
   `;
 }
 
+// 4. Tasks Due Week‑By‑Week per Section Officer
 function generateTasksDueWeekByWeek() {
   const { rawData } = getFilteredData();
   const today = state.reportDate || new Date();
@@ -2753,6 +2757,7 @@ function generateTasksDueWeekByWeek() {
   `;
 }
 
+// 5. Component‑Wise Progress
 function generateComponentWise() {
   const { rawData } = getFilteredData();
   const map = {};
@@ -2793,6 +2798,7 @@ function generateComponentWise() {
   `;
 }
 
+// 6. Month‑Wise Target vs Achievement (Schemes)
 function generateMonthWiseSchemes() {
   const { schemes } = getFilteredData();
   const monthMap = {};
@@ -2824,6 +2830,7 @@ function generateMonthWiseSchemes() {
   `;
 }
 
+// 7. Month‑Wise Target vs Achievement (Components)
 function generateMonthWiseComponents() {
   const { rawData } = getFilteredData();
   const map = {};
@@ -2856,6 +2863,7 @@ function generateMonthWiseComponents() {
   `;
 }
 
+// 8. Month‑Wise Target vs Achievement (Tasks)
 function generateMonthWiseTasks() {
   const { rawData } = getFilteredData();
   const map = {};
@@ -2887,6 +2895,83 @@ function generateMonthWiseTasks() {
   `;
 }
 
+// 9. Tasks Due Week‑By‑Week per Scheme (NEW)
+function generateTasksDueWeekByWeekScheme() {
+  const { schemes, rawData } = getFilteredData();
+  const today = state.reportDate || new Date();
+  const dayOfWeek = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
+  const weeks = [];
+  for (let i = 0; i < 8; i++) {
+    const start = new Date(monday);
+    start.setDate(start.getDate() + i * 7);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    weeks.push({ start, end, label: `${formatDate(start)} - ${formatDate(end)}` });
+  }
+
+  const schemeMap = {};
+  schemes.forEach(s => {
+    schemeMap[s.scheme_id] = {
+      name: s.scheme_name,
+      contractor: s.contractor,
+      officer: s.section_officer,
+      counts: weeks.map(() => 0)
+    };
+  });
+
+  rawData.forEach(task => {
+    if (!task.parsedDate) return;
+    const entry = schemeMap[task.scheme_id];
+    if (!entry) return;
+    const due = task.parsedDate;
+    for (let i = 0; i < weeks.length; i++) {
+      if (due >= weeks[i].start && due <= weeks[i].end) {
+        entry.counts[i]++;
+        break;
+      }
+    }
+  });
+
+  const totals = weeks.map(() => 0);
+  let grandTotal = 0;
+  let headerRow = '<th class="px-3 py-2 text-center align-top border">Scheme</th>';
+  weeks.forEach(w => headerRow += `<th class="px-3 py-2 text-center align-top border">${w.label}</th>`);
+  headerRow += '<th class="px-3 py-2 text-center align-top border">Total</th>';
+
+  let bodyRows = '';
+  Object.entries(schemeMap).forEach(([id, entry]) => {
+    let row = `<td class="px-3 py-2 font-medium border">${escapeHtml(entry.name)}</td>`;
+    let total = 0;
+    entry.counts.forEach((c, idx) => {
+      totals[idx] += c;
+      const highlight = c > 0 ? 'background-color: #cce5ff; font-weight: bold;' : '';
+      row += `<td class="px-3 py-2 text-center border" style="${highlight}">${c}</td>`;
+      total += c;
+    });
+    grandTotal += total;
+    row += `<td class="px-3 py-2 text-center font-bold border">${total}</td>`;
+    bodyRows += `<tr>${row}</tr>`;
+  });
+
+  let totalsRow = '<td class="px-3 py-2 font-bold border">Total</td>';
+  totals.forEach(t => totalsRow += `<td class="px-3 py-2 text-center font-bold border">${t}</td>`);
+  totalsRow += `<td class="px-3 py-2 text-center font-bold border">${grandTotal}</td>`;
+
+  return `
+    <h3 class="text-lg font-bold mb-2 text-center">Tasks Due Week‑By‑Week per Scheme</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border border-gray-300">
+        <thead class="bg-gray-100"><tr>${headerRow}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+        <tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot>
+      </table>
+    </div>
+  `;
+}
+
+// Toggle deadline details
 function toggleDeadlineDetail(catId) {
   const detailDiv = document.getElementById(catId);
   if (detailDiv) {
