@@ -2231,3 +2231,707 @@ ${schemesHTML}
 
 </body>
 </html>
+
+<!-- =============================================
+ "What if Sumit Sir wants to know !!"  Feature
+ (Sub‑Division filter based on Section Officers)
+ ============================================= -->
+<style>
+@keyframes popTitle {
+  0%, 100% { transform: scale(1); color: #b45309; }
+  50% { transform: scale(1.05); color: #d97706; }
+}
+.popping-title {
+  animation: popTitle 2s infinite;
+  display: inline-block;
+}
+.clickable-count {
+  cursor: pointer;
+  text-decoration: underline;
+  color: #2563eb;
+  font-weight: bold;
+}
+.clickable-count:hover { color: #1d4ed8; }
+.hidden-detail { display: none; }
+</style>
+
+<script>
+// ==========================================
+// ADD BUTTON TO HEADER
+// ==========================================
+(function addQuickReportButton() {
+  const headerDiv = document.querySelector('header .flex.items-center.gap-4');
+  if (!headerDiv) return;
+  const btn = document.createElement('button');
+  btn.id = 'btnQuickReports';
+  btn.className = 'px-4 py-2 text-sm bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 font-medium transition-colors flex items-center shadow-md';
+  btn.innerHTML = '<i class="fas fa-lightbulb mr-2"></i> Quick Reports';
+  btn.addEventListener('click', openQuickReportModal);
+  const roadmapBtn = document.getElementById('btnRoadmapDownload');
+  if (roadmapBtn && roadmapBtn.parentNode) {
+    roadmapBtn.parentNode.insertBefore(btn, roadmapBtn.nextSibling);
+  } else {
+    headerDiv.appendChild(btn);
+  }
+})();
+
+// ==========================================
+// SECTION OFFICER → SUB‑DIVISION MAPPING
+// ==========================================
+const officerSubDivisionMap = {
+  "ANINDITA BHUYAN": "Tinsukia Sub Division",
+  "ANUPAM DAS": "Digboi Sub Division",
+  "ANUREKH PHUKON": "Tinsukia Sub Division",
+  "ASIF ALI": "Tinsukia Sub Division",
+  "AYANJYOTI DEORI": "Tinsukia Sub Division",
+  "JURI SONOWAL": "Digboi Sub Division",
+  "KRISHNA KAMAL GOHAIN": "Tinsukia Sub Division",
+  "NIHA NEWAR": "Digboi Sub Division",
+  "PADMINI TAMULI": "Tinsukia Sub Division",
+  "PARASHMONI GOGOI": "Digboi Sub Division",
+  "PARISHMITA PHUKON": "Digboi Sub Division",
+  "PRANAMIKA DAS": "Tinsukia Sub Division",
+  "PRANTOR BARUAH": "Digboi Sub Division",
+  "PUBALI CHUTIA": "Digboi Sub Division",
+  "PUJA MORAN": "Digboi Sub Division",
+  "RAJDEEP SHARMA": "Tinsukia Sub Division",
+  "RANJITA DAS": "Tinsukia Sub Division",
+  "RISHA GOGOI": "Tinsukia Sub Division",
+  "RUKSANA BEGUM": "Digboi Sub Division",
+  "SUMU GOGOI": "Tinsukia Sub Division"
+};
+
+// ==========================================
+// CREATE MODAL HTML
+// ==========================================
+(function createQuickReportModal() {
+  const modalHTML = `
+  <div id="quickReportModal" class="fixed inset-0 z-50 hidden modal-backdrop overflow-y-auto">
+    <div class="min-h-screen flex items-start justify-center p-4 py-6">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl relative my-4">
+        <div class="flex justify-between items-center p-4 border-b border-gray-200 sticky top-0 bg-white z-10 rounded-t-xl">
+          <h2 class="text-lg font-bold text-gray-700 uppercase flex items-center gap-2 popping-title">
+            <i class="fas fa-lightbulb text-yellow-500"></i> What if Sumit Sir wants to know !!
+          </h2>
+          <div class="flex gap-2">
+            <button onclick="printQuickReport()" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm">
+              <i class="fas fa-print mr-1"></i> Print
+            </button>
+            <button onclick="closeQuickReportModal()" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Close</button>
+          </div>
+        </div>
+        <div class="p-4 bg-gray-50 border-b border-gray-200">
+          <div class="flex flex-wrap items-center gap-4">
+            <label class="text-xs font-bold text-gray-700 uppercase">Select Report</label>
+            <div class="relative w-full sm:w-auto">
+              <select id="quickReportSelect" class="appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm" onchange="generateQuickReport()">
+                <option value="">-- Choose a Report --</option>
+                <option value="allReports">📋 ALL REPORTS (generate all at once)</option>
+                <option value="schemesByDeadline">Schemes to be Completed by Deadline</option>
+                <option value="tasksDueWeekByWeek">Tasks Due Week‑By‑Week per Section Officer</option>
+                <option value="monthWiseSchemes">Month‑Wise Target vs Achievement (Schemes)</option>
+                <option value="monthWiseTasks">Month‑Wise Target vs Achievement (Tasks)</option>
+                <option value="tasksDueWeekByWeek">Tasks Due Week‑By‑Week per Section Officer</option>
+                <option value="componentWise">Component‑Wise Progress</option>
+                <option value="bestWorstContractors">Performance - Contractors</option>
+                <option value="bestWorstOfficers">Performance - Section Officers</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.25 7.5l4.75 4.75 4.75-4.75L16 8.5l-6 6-6-6z"/></svg>
+              </div>
+            </div>
+
+            <!-- Sub‑Division Filter -->
+            <label class="text-xs font-bold text-gray-700 uppercase ml-4">Sub‑Division</label>
+            <div class="relative w-full sm:w-auto">
+              <select id="quickReportSubDivision" class="appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm" onchange="generateQuickReport()">
+                <option value="">All Sub‑Divisions</option>
+                <option value="Tinsukia Sub Division">Tinsukia Sub Division</option>
+                <option value="Digboi Sub Division">Digboi Sub Division</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.25 7.5l4.75 4.75 4.75-4.75L16 8.5l-6 6-6-6z"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="p-4 overflow-x-auto" id="quickReportContent" style="max-height: calc(100vh - 220px); overflow-y: auto;">
+          <p class="text-gray-500 text-center py-8">Please select a report from the dropdown above.</p>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+})();
+
+// ==========================================
+// MODAL OPEN / CLOSE
+// ==========================================
+function openQuickReportModal() {
+  document.getElementById('quickReportModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('quickReportSelect').value = '';
+  document.getElementById('quickReportSubDivision').value = '';
+  document.getElementById('quickReportContent').innerHTML = '<p class="text-gray-500 text-center py-8">Please select a report from the dropdown above.</p>';
+}
+
+function closeQuickReportModal() {
+  document.getElementById('quickReportModal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+// ==========================================
+// UTILITY: GET FILTERED DATA (by Section Officer's Sub‑Division)
+// ==========================================
+function getFilteredData() {
+  const subDivision = document.getElementById('quickReportSubDivision').value;
+  if (!subDivision) {
+    return { schemes: state.schemes, rawData: state.rawData };
+  }
+  // Filter schemes where the Section Officer belongs to the selected sub-division
+  const filteredSchemes = state.schemes.filter(s => {
+    const officer = s.section_officer;
+    return officerSubDivisionMap[officer] === subDivision;
+  });
+  const schemeIds = new Set(filteredSchemes.map(s => s.scheme_id));
+  const filteredRaw = state.rawData.filter(r => schemeIds.has(r.scheme_id));
+  return { schemes: filteredSchemes, rawData: filteredRaw };
+}
+
+// ==========================================
+// UTILITY: GRADIENT DATA BAR
+// ==========================================
+function formatDataBar(value) {
+  const percent = Math.min(100, Math.max(0, value)).toFixed(1);
+  return `<span style="
+    display: inline-block;
+    width: 100%;
+    background: linear-gradient(to right, #f44336 0%, #ffeb3b 50%, #4caf50 100%);
+    background-size: ${percent}% 100%;
+    background-repeat: no-repeat;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: bold;
+    text-align: center;
+    color: #000;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
+  ">${percent}%</span>`;
+}
+
+// ==========================================
+// REPORT ENGINE
+// ==========================================
+function generateQuickReport() {
+  const type = document.getElementById('quickReportSelect').value;
+  if (!type) {
+    document.getElementById('quickReportContent').innerHTML = '<p class="text-gray-500 text-center py-8">Please select a report from the dropdown above.</p>';
+    return;
+  }
+
+  let html = '';
+  if (type === 'allReports') {
+    html = generateAllReports();
+  } else {
+    switch(type) {
+      case 'schemesByDeadline': html = generateSchemesByDeadline(); break;
+      case 'tasksDueWeekByWeek': html = generateTasksDueWeekByWeek(); break;
+      case 'monthWiseSchemes': html = generateMonthWiseSchemes(); break;
+      case 'monthWiseTasks': html = generateMonthWiseTasks(); break;
+      case 'componentWise': html = generateComponentWise(); break;
+      case 'bestWorstContractors': html = generateBestWorstContractors(); break;
+      case 'bestWorstOfficers': html = generateBestWorstOfficers(); break;
+      default: html = '<p class="text-gray-500">Unknown report type.</p>';
+    }
+  }
+  document.getElementById('quickReportContent').innerHTML = wrapReport(html);
+  if (type === 'schemesByDeadline' || type === 'allReports') {
+    attachDeadlineToggleEvents();
+  }
+}
+
+// ==========================================
+// ALL REPORTS GENERATOR
+// ==========================================
+function generateAllReports() {
+  return `
+    <div style="page-break-after: always;">${generateSchemesByDeadline()}</div>
+    <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
+    <div style="page-break-after: always;">${generateTasksDueWeekByWeek()}</div>
+    <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
+    <div style="page-break-after: always;">${generateMonthWiseSchemes()}</div>
+    <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
+    <div style="page-break-after: always;">${generateMonthWiseTasks()}</div>
+    <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
+    <div style="page-break-after: always;">${generateComponentWise()}</div>
+    <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
+    <div style="page-break-after: always;">${generateBestWorstContractors()}</div>
+    <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
+    <div>${generateBestWorstOfficers()}</div>
+  `;
+}
+
+// ==========================================
+// COMMON REPORT FRAME
+// ==========================================
+function wrapReport(content) {
+  const division = escapeHtml(state.scnDetails.divisionName || 'Tinsukia Division');
+  const reportDate = formatDate(state.reportDate);
+  const subDivision = document.getElementById('quickReportSubDivision').value;
+  const filterNote = subDivision ? ` (Sub‑Division: ${escapeHtml(subDivision)})` : '';
+  return `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+      <div style="text-align: center; border-bottom: 2px solid #ccc; padding-bottom: 12px; margin-bottom: 20px;">
+        <h1 style="margin: 0; font-size: 22px; font-weight: bold; color: #1a1a1a;">Jal Jeevan Mission (JJM 2.0)</h1>
+        <div style="font-size: 14px; font-weight: 600; color: #444;">${division}${filterNote}</div>
+        <div style="font-size: 12px; color: #666; margin-top: 4px;">Report Date: ${reportDate}</div>
+      </div>
+      ${content}
+      <div style="text-align: center; font-size: 11px; color: #999; margin-top: 30px; padding-top: 10px; border-top: 1px solid #ddd;">
+        Generated by JJM 2.0 Monitoring System
+      </div>
+    </div>
+  `;
+}
+
+// ==========================================
+// ALL REPORT FUNCTIONS (identical logic, unchanged)
+// ==========================================
+function generateSchemesByDeadline() {
+  const { schemes } = getFilteredData();
+  const deadline1 = new Date(2026, 7, 15);
+  const deadline2 = new Date(2026, 8, 16);
+
+  const cat1 = [], cat2 = [], cat3 = [];
+  schemes.forEach(s => {
+    if (!s.latestDueDate) cat3.push(s);
+    else if (s.latestDueDate <= deadline1) cat1.push(s);
+    else if (s.latestDueDate <= deadline2) cat2.push(s);
+    else cat3.push(s);
+  });
+
+  cat1.sort((a, b) => a.latestDueDate - b.latestDueDate);
+  cat2.sort((a, b) => a.latestDueDate - b.latestDueDate);
+  cat3.sort((a, b) => {
+    if (!a.latestDueDate && !b.latestDueDate) return 0;
+    if (!a.latestDueDate) return 1;
+    if (!b.latestDueDate) return -1;
+    return a.latestDueDate - b.latestDueDate;
+  });
+
+  const renderCategory = (label, list, catId) => {
+    const count = list.length;
+    return `<tr>
+      <td class="px-4 py-2 font-medium border">${label}</td>
+      <td class="px-4 py-2 text-center border">
+        <span class="clickable-count" onclick="toggleDeadlineDetail('${catId}')">${count}</span>
+        <div id="${catId}" class="hidden-detail mt-2">
+          <table class="min-w-full text-sm border border-gray-300 mt-1">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="px-3 py-1 border">Scheme Name</th>
+                <th class="px-3 py-1 border">Contractor</th>
+                <th class="px-3 py-1 border">Section Officer</th>
+                <th class="px-3 py-1 border">Final Due Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${list.length ? list.map(s => `<tr>
+                <td class="px-3 py-1 border">${escapeHtml(s.scheme_name)}</td>
+                <td class="px-3 py-1 border">${escapeHtml(s.contractor)}</td>
+                <td class="px-3 py-1 border">${escapeHtml(s.section_officer)}</td>
+                <td class="px-3 py-1 border">${s.latestDueDate ? formatDate(s.latestDueDate) : 'No date'}</td>
+              </tr>`).join('') : '<tr><td colspan="4" class="px-3 py-1 text-center border">No schemes</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </td>
+    </tr>`;
+  };
+
+  return `
+    <h3 class="text-lg font-bold mb-2 text-center">Schemes to be Completed by Deadline</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border border-gray-300">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="px-4 py-2 text-left border">Deadline Category</th>
+            <th class="px-4 py-2 text-center border">Number of Schemes</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${renderCategory('By 15 August 2026', cat1, 'cat1')}
+          ${renderCategory('By 16 September 2026 (after 15 Aug)', cat2, 'cat2')}
+          ${renderCategory('After 16 September 2026', cat3, 'cat3')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function generateBestWorstContractors() {
+  const { schemes } = getFilteredData();
+  const map = {};
+  schemes.forEach(s => {
+    const c = s.contractor || 'N/A';
+    if (!map[c]) map[c] = { totalSchemes: 0, totalTasks: 0, totalCompletion: 0, critical: 0, upcoming: 0, scheduled: 0 };
+    map[c].totalSchemes++;
+    map[c].totalTasks += s.tasks;
+    map[c].totalCompletion += s.avg_completion * s.tasks;
+    map[c].critical += s.critical;
+    map[c].upcoming += s.upcoming;
+    map[c].scheduled += s.scheduled;
+  });
+  const arr = Object.entries(map).map(([contractor, data]) => ({
+    contractor,
+    schemes: data.totalSchemes,
+    tasks: data.totalTasks,
+    avgCompletion: data.totalTasks ? (data.totalCompletion / data.totalTasks).toFixed(1) : '0',
+    critical: data.critical,
+    upcoming: data.upcoming,
+    scheduled: data.scheduled
+  }));
+  arr.sort((a,b) => b.avgCompletion - a.avgCompletion);
+
+  let tableRows = '';
+  arr.forEach((item, idx) => {
+    const val = parseFloat(item.avgCompletion);
+    tableRows += `<tr>
+      <td class="px-3 py-2 text-center">${idx+1}</td>
+      <td class="px-3 py-2 font-medium">${escapeHtml(item.contractor)}</td>
+      <td class="px-3 py-2 text-center">${item.schemes}</td>
+      <td class="px-3 py-2 text-center">${item.tasks}</td>
+      <td class="px-3 py-2 text-center">${formatDataBar(val)}</td>
+      <td class="px-3 py-2 text-center">${item.critical}</td>
+      <td class="px-3 py-2 text-center">${item.upcoming}</td>
+      <td class="px-3 py-2 text-center">${item.scheduled}</td>
+    </tr>`;
+  });
+
+  return `
+    <h3 class="text-lg font-bold mb-2 text-center">Performance - Contractors by Average Completion</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border border-gray-300">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="px-3 py-2 text-center align-top border">Rank</th>
+            <th class="px-3 py-2 text-center align-top border">Contractor</th>
+            <th class="px-3 py-2 text-center align-top border">Schemes</th>
+            <th class="px-3 py-2 text-center align-top border">Tasks</th>
+            <th class="px-3 py-2 text-center align-top border">Avg. Completion</th>
+            <th class="px-3 py-2 text-center align-top border">Critical</th>
+            <th class="px-3 py-2 text-center align-top border">Upcoming</th>
+            <th class="px-3 py-2 text-center align-top border">Scheduled</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function generateBestWorstOfficers() {
+  const { schemes } = getFilteredData();
+  const map = {};
+  schemes.forEach(s => {
+    const o = s.section_officer || 'N/A';
+    if (!map[o]) map[o] = { totalSchemes: 0, totalTasks: 0, totalCompletion: 0, critical: 0, upcoming: 0, scheduled: 0 };
+    map[o].totalSchemes++;
+    map[o].totalTasks += s.tasks;
+    map[o].totalCompletion += s.avg_completion * s.tasks;
+    map[o].critical += s.critical;
+    map[o].upcoming += s.upcoming;
+    map[o].scheduled += s.scheduled;
+  });
+  const arr = Object.entries(map).map(([officer, data]) => ({
+    officer,
+    schemes: data.totalSchemes,
+    tasks: data.totalTasks,
+    avgCompletion: data.totalTasks ? (data.totalCompletion / data.totalTasks).toFixed(1) : '0',
+    critical: data.critical,
+    upcoming: data.upcoming,
+    scheduled: data.scheduled
+  }));
+  arr.sort((a,b) => b.avgCompletion - a.avgCompletion);
+
+  let tableRows = '';
+  arr.forEach((item, idx) => {
+    const val = parseFloat(item.avgCompletion);
+    tableRows += `<tr>
+      <td class="px-3 py-2 text-center">${idx+1}</td>
+      <td class="px-3 py-2 font-medium">${escapeHtml(item.officer)}</td>
+      <td class="px-3 py-2 text-center">${item.schemes}</td>
+      <td class="px-3 py-2 text-center">${item.tasks}</td>
+      <td class="px-3 py-2 text-center">${formatDataBar(val)}</td>
+      <td class="px-3 py-2 text-center">${item.critical}</td>
+      <td class="px-3 py-2 text-center">${item.upcoming}</td>
+      <td class="px-3 py-2 text-center">${item.scheduled}</td>
+    </tr>`;
+  });
+
+  return `
+    <h3 class="text-lg font-bold mb-2 text-center">Performance - Section Officers by Average Completion</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border border-gray-300">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="px-3 py-2 text-center align-top border">Rank</th>
+            <th class="px-3 py-2 text-center align-top border">Section Officer</th>
+            <th class="px-3 py-2 text-center align-top border">Schemes</th>
+            <th class="px-3 py-2 text-center align-top border">Tasks</th>
+            <th class="px-3 py-2 text-center align-top border">Avg. Completion</th>
+            <th class="px-3 py-2 text-center align-top border">Critical</th>
+            <th class="px-3 py-2 text-center align-top border">Upcoming</th>
+            <th class="px-3 py-2 text-center align-top border">Scheduled</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function generateTasksDueWeekByWeek() {
+  const { rawData } = getFilteredData();
+  const today = state.reportDate || new Date();
+  const dayOfWeek = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
+  const weeks = [];
+  for (let i = 0; i < 8; i++) {
+    const start = new Date(monday);
+    start.setDate(start.getDate() + i * 7);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    weeks.push({ start, end, label: `${formatDate(start)} - ${formatDate(end)}` });
+  }
+
+  const officerMap = {};
+  rawData.forEach(task => {
+    if (!task.parsedDate) return;
+    const officer = task.section_officer || 'N/A';
+    if (!officerMap[officer]) officerMap[officer] = weeks.map(() => 0);
+    const due = task.parsedDate;
+    for (let i = 0; i < weeks.length; i++) {
+      if (due >= weeks[i].start && due <= weeks[i].end) { officerMap[officer][i]++; break; }
+    }
+  });
+
+  const totals = weeks.map(() => 0);
+  let grandTotal = 0;
+  let headerRow = '<th class="px-3 py-2 text-center align-top border">Officer</th>';
+  weeks.forEach(w => headerRow += `<th class="px-3 py-2 text-center align-top border">${w.label}</th>`);
+  headerRow += '<th class="px-3 py-2 text-center align-top border">Total</th>';
+
+  let bodyRows = '';
+  Object.entries(officerMap).sort().forEach(([officer, counts]) => {
+    let row = `<td class="px-3 py-2 font-medium border">${escapeHtml(officer)}</td>`;
+    let total = 0;
+    counts.forEach((c, idx) => {
+      totals[idx] += c;
+      const highlight = c > 0 ? 'background-color: #cce5ff; font-weight: bold;' : '';
+      row += `<td class="px-3 py-2 text-center border" style="${highlight}">${c}</td>`;
+      total += c;
+    });
+    grandTotal += total;
+    row += `<td class="px-3 py-2 text-center font-bold border">${total}</td>`;
+    bodyRows += `<tr>${row}</tr>`;
+  });
+
+  let totalsRow = '<td class="px-3 py-2 font-bold border">Total</td>';
+  totals.forEach(t => totalsRow += `<td class="px-3 py-2 text-center font-bold border">${t}</td>`);
+  totalsRow += `<td class="px-3 py-2 text-center font-bold border">${grandTotal}</td>`;
+
+  return `
+    <h3 class="text-lg font-bold mb-2 text-center">Tasks Due Week‑By‑Week per Section Officer</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border border-gray-300">
+        <thead class="bg-gray-100"><tr>${headerRow}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+        <tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot>
+      </table>
+    </div>
+  `;
+}
+
+function generateComponentWise() {
+  const { rawData } = getFilteredData();
+  const map = {};
+  rawData.forEach(t => {
+    const comp = t.component || 'N/A';
+    if (!map[comp]) map[comp] = { tasks: 0, totalCompletion: 0, critical: 0, upcoming: 0, scheduled: 0 };
+    map[comp].tasks++;
+    map[comp].totalCompletion += t.completion;
+    const days = t.parsedDate ? Math.ceil((t.parsedDate - state.reportDate) / (1000*60*60*24)) : null;
+    if (days !== null && days < 7 && t.completion < 100) map[comp].critical++;
+    else if (days !== null && days >= 7 && days <= 30) map[comp].upcoming++;
+    else map[comp].scheduled++;
+  });
+  let rows = ''; let totalTasks = 0, totalCritical = 0, totalUpcoming = 0, totalScheduled = 0, totalCompletion = 0;
+  for (const [comp, d] of Object.entries(map)) {
+    totalTasks += d.tasks; totalCritical += d.critical; totalUpcoming += d.upcoming; totalScheduled += d.scheduled; totalCompletion += d.totalCompletion;
+    const avg = Math.round(d.totalCompletion / d.tasks);
+    rows += `<tr>
+      <td class="px-3 py-2 border">${escapeHtml(comp)}</td>
+      <td class="px-3 py-2 text-center border">${d.tasks}</td>
+      <td class="px-3 py-2 text-center border">${formatDataBar(avg)}</td>
+      <td class="px-3 py-2 text-center border">${d.critical}</td>
+      <td class="px-3 py-2 text-center border">${d.upcoming}</td>
+      <td class="px-3 py-2 text-center border">${d.scheduled}</td>
+    </tr>`;
+  }
+  const overallAvg = totalTasks ? Math.round(totalCompletion / totalTasks) : 0;
+  const totalsRow = `<td class="px-3 py-2 font-bold border">Total</td><td class="px-3 py-2 text-center font-bold border">${totalTasks}</td><td class="px-3 py-2 text-center font-bold border">${formatDataBar(overallAvg)}</td><td class="px-3 py-2 text-center font-bold border">${totalCritical}</td><td class="px-3 py-2 text-center font-bold border">${totalUpcoming}</td><td class="px-3 py-2 text-center font-bold border">${totalScheduled}</td>`;
+  return `
+    <h3 class="text-lg font-bold mb-2 text-center">Component‑Wise Progress</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border border-gray-300">
+        <thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Component</th><th class="px-3 py-2 text-center align-top border">Tasks</th><th class="px-3 py-2 text-center align-top border">Avg %</th><th class="px-3 py-2 text-center align-top border">Critical</th><th class="px-3 py-2 text-center align-top border">Upcoming</th><th class="px-3 py-2 text-center align-top border">Scheduled</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot>
+      </table>
+    </div>
+  `;
+}
+
+function generateMonthWiseSchemes() {
+  const { schemes } = getFilteredData();
+  const monthMap = {};
+  schemes.forEach(s => {
+    if (!s.latestDueDate) return;
+    const key = `${s.latestDueDate.getFullYear()}-${String(s.latestDueDate.getMonth()+1).padStart(2,'0')}`;
+    if (!monthMap[key]) monthMap[key] = { schemes: 0, totalCompletion: 0 };
+    monthMap[key].schemes++;
+    monthMap[key].totalCompletion += s.avg_completion;
+  });
+  let rows = ''; let totalSchemes = 0, totalCompletion = 0;
+  Object.keys(monthMap).sort().forEach(month => {
+    const d = monthMap[month];
+    totalSchemes += d.schemes; totalCompletion += d.totalCompletion;
+    const actual = Math.round(d.totalCompletion / d.schemes);
+    rows += `<tr><td class="px-3 py-2 border">${month}</td><td class="px-3 py-2 text-center border">${d.schemes}</td><td class="px-3 py-2 text-center border">100%</td><td class="px-3 py-2 text-center border">${formatDataBar(actual)}</td></tr>`;
+  });
+  const overallActual = totalSchemes ? Math.round(totalCompletion / totalSchemes) : 0;
+  const totalsRow = `<td class="px-3 py-2 font-bold border">Total</td><td class="px-3 py-2 text-center font-bold border">${totalSchemes}</td><td class="px-3 py-2 text-center font-bold border">100%</td><td class="px-3 py-2 text-center font-bold border">${formatDataBar(overallActual)}</td>`;
+  return `
+    <h3 class="text-lg font-bold mb-2 text-center">Month‑Wise Target vs Achievement (Schemes)</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border border-gray-300">
+        <thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Month</th><th class="px-3 py-2 text-center align-top border">Schemes</th><th class="px-3 py-2 text-center align-top border">Target</th><th class="px-3 py-2 text-center align-top border">Actual</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot>
+      </table>
+    </div>
+  `;
+}
+
+function generateMonthWiseComponents() {
+  const { rawData } = getFilteredData();
+  const map = {};
+  rawData.forEach(t => {
+    if (!t.parsedDate) return;
+    const comp = t.component || 'N/A';
+    const key = `${t.parsedDate.getFullYear()}-${String(t.parsedDate.getMonth()+1).padStart(2,'0')}`;
+    const fullKey = `${comp}|${key}`;
+    if (!map[fullKey]) map[fullKey] = { component: comp, month: key, tasks: 0, totalCompletion: 0 };
+    map[fullKey].tasks++;
+    map[fullKey].totalCompletion += t.completion;
+  });
+  let rows = ''; let totalTasks = 0, totalCompletion = 0;
+  Object.values(map).sort((a,b) => a.month.localeCompare(b.month) || a.component.localeCompare(b.component)).forEach(d => {
+    totalTasks += d.tasks; totalCompletion += d.totalCompletion;
+    const actual = Math.round(d.totalCompletion / d.tasks);
+    rows += `<tr><td class="px-3 py-2 border">${d.month}</td><td class="px-3 py-2 border">${escapeHtml(d.component)}</td><td class="px-3 py-2 text-center border">${d.tasks}</td><td class="px-3 py-2 text-center border">100%</td><td class="px-3 py-2 text-center border">${formatDataBar(actual)}</td></tr>`;
+  });
+  const overallActual = totalTasks ? Math.round(totalCompletion / totalTasks) : 0;
+  const totalsRow = `<td class="px-3 py-2 font-bold border" colspan="2">Total</td><td class="px-3 py-2 text-center font-bold border">${totalTasks}</td><td class="px-3 py-2 text-center font-bold border">100%</td><td class="px-3 py-2 text-center font-bold border">${formatDataBar(overallActual)}</td>`;
+  return `
+    <h3 class="text-lg font-bold mb-2 text-center">Month‑Wise Target vs Achievement (Components)</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border border-gray-300">
+        <thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Month</th><th class="px-3 py-2 text-center align-top border">Component</th><th class="px-3 py-2 text-center align-top border">Tasks</th><th class="px-3 py-2 text-center align-top border">Target</th><th class="px-3 py-2 text-center align-top border">Actual</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot>
+      </table>
+    </div>
+  `;
+}
+
+function generateMonthWiseTasks() {
+  const { rawData } = getFilteredData();
+  const map = {};
+  rawData.forEach(t => {
+    if (!t.parsedDate) return;
+    const key = `${t.parsedDate.getFullYear()}-${String(t.parsedDate.getMonth()+1).padStart(2,'0')}`;
+    if (!map[key]) map[key] = { tasks: 0, totalCompletion: 0 };
+    map[key].tasks++;
+    map[key].totalCompletion += t.completion;
+  });
+  let rows = ''; let totalTasks = 0, totalCompletion = 0;
+  Object.keys(map).sort().forEach(month => {
+    const d = map[month];
+    totalTasks += d.tasks; totalCompletion += d.totalCompletion;
+    const actual = Math.round(d.totalCompletion / d.tasks);
+    rows += `<tr><td class="px-3 py-2 border">${month}</td><td class="px-3 py-2 text-center border">${d.tasks}</td><td class="px-3 py-2 text-center border">100%</td><td class="px-3 py-2 text-center border">${formatDataBar(actual)}</td></tr>`;
+  });
+  const overallActual = totalTasks ? Math.round(totalCompletion / totalTasks) : 0;
+  const totalsRow = `<td class="px-3 py-2 font-bold border">Total</td><td class="px-3 py-2 text-center font-bold border">${totalTasks}</td><td class="px-3 py-2 text-center font-bold border">100%</td><td class="px-3 py-2 text-center font-bold border">${formatDataBar(overallActual)}</td>`;
+  return `
+    <h3 class="text-lg font-bold mb-2 text-center">Month‑Wise Target vs Achievement (Tasks)</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border border-gray-300">
+        <thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Month</th><th class="px-3 py-2 text-center align-top border">Tasks</th><th class="px-3 py-2 text-center align-top border">Target</th><th class="px-3 py-2 text-center align-top border">Actual</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot>
+      </table>
+    </div>
+  `;
+}
+
+function toggleDeadlineDetail(catId) {
+  const detailDiv = document.getElementById(catId);
+  if (detailDiv) {
+    if (detailDiv.style.display === 'none' || detailDiv.classList.contains('hidden-detail')) {
+      detailDiv.classList.remove('hidden-detail');
+      detailDiv.style.display = 'block';
+    } else {
+      detailDiv.classList.add('hidden-detail');
+      detailDiv.style.display = 'none';
+    }
+  }
+}
+
+function attachDeadlineToggleEvents() {
+  document.querySelectorAll('.hidden-detail').forEach(el => el.style.display = 'none');
+}
+
+// ==========================================
+// PRINT QUICK REPORT
+// ==========================================
+function printQuickReport() {
+  const content = document.getElementById('quickReportContent').innerHTML;
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Quick Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th, td { border: 1px solid #ccc; padding: 8px; text-align: center; vertical-align: top; }
+          th { background: #f0f0f0; }
+          tfoot td { background: #f9f9f9; font-weight: bold; }
+          h3 { margin-top: 30px; text-align: center; }
+          .clickable-count { text-decoration: underline; color: #2563eb; }
+          @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .hidden-detail { display: block !important; }
+          }
+        </style>
+      </head>
+      <body>${content}</body>
+    </html>
+  `);
+  printWindow.document.close();
+  setTimeout(() => printWindow.print(), 500);
+}
+</script>
