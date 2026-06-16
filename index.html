@@ -2338,9 +2338,10 @@ ${schemesHTML}
   });
 })();
 </script>
+
 <!-- =============================================
  "What if Sumit Sir wants to know !!"  Feature
- (COMPLETE – all reports, Section‑Officer‑wise deadline, print working)
+ (COMPLETE – all reports, clickable task counts, sorted deadline)
  ============================================= -->
 <style>
 @keyframes popTitle {
@@ -2358,6 +2359,7 @@ ${schemesHTML}
 .action-plan-toggle:hover { color: #2563eb; }
 @media print {
   .action-plan-card { page-break-after: always; }
+  .hidden-detail { display: block !important; }
 }
 </style>
 
@@ -2567,6 +2569,7 @@ function generateQuickReport() {
   document.getElementById('quickReportContent').innerHTML = wrapReport(html);
   if (type === 'schemesByDeadline' || type === 'allReports') attachDeadlineToggleEvents();
   if (type === 'schemeActionPlan' || type === 'allReports') attachActionPlanToggleEvents();
+  if (type === 'tasksDueWeekByWeek' || type === 'allReports') attachWeekDetailToggleEvents();
 }
 
 // ==========================================
@@ -2707,7 +2710,7 @@ function generateSchemesByDeadline() {
 }
 
 // ==========================================
-// 3. NEW: SCHEMES BY DEADLINE – SECTION OFFICER WISE
+// 3. SCHEMES BY DEADLINE – SECTION OFFICER WISE (sorted by earliest due date, shows avg completion)
 // ==========================================
 function generateSchemesByDeadlineOfficerWise() {
   const { schemes } = getFilteredData();
@@ -2723,10 +2726,8 @@ function generateSchemesByDeadlineOfficerWise() {
     return { ...s, status };
   });
 
+  // Sort by final due date (earliest first), schemes without date go to the bottom
   enrichedSchemes.sort((a, b) => {
-    if (a.section_officer !== b.section_officer) {
-      return (a.section_officer || '').localeCompare(b.section_officer || '');
-    }
     if (!a.latestDueDate && !b.latestDueDate) return 0;
     if (!a.latestDueDate) return 1;
     if (!b.latestDueDate) return -1;
@@ -2736,12 +2737,13 @@ function generateSchemesByDeadlineOfficerWise() {
   let rows = '';
   let serial = 1;
   enrichedSchemes.forEach(s => {
+    const avgComp = s.avg_completion + '%';
     rows += `<tr>
       <td class="px-3 py-2 text-center border">${serial++}</td>
       <td class="px-3 py-2 border">${escapeHtml(s.section_officer || 'N/A')}</td>
       <td class="px-3 py-2 border">${escapeHtml(s.scheme_name)}</td>
       <td class="px-3 py-2 border">${s.latestDueDate ? formatDate(s.latestDueDate) : 'No date'}</td>
-      <td class="px-3 py-2 border">${s.status}</td>
+      <td class="px-3 py-2 text-center border">${avgComp}</td>
     </tr>`;
   });
 
@@ -2755,7 +2757,7 @@ function generateSchemesByDeadlineOfficerWise() {
             <th class="px-3 py-2 text-left align-top border">Section Officer Name</th>
             <th class="px-3 py-2 text-left align-top border">Scheme Name</th>
             <th class="px-3 py-2 text-center align-top border">Final Due Date</th>
-            <th class="px-3 py-2 text-left align-top border">Status</th>
+            <th class="px-3 py-2 text-center align-top border">Avg. Completion %</th>
           </tr>
         </thead>
         <tbody>
@@ -2767,23 +2769,127 @@ function generateSchemesByDeadlineOfficerWise() {
 }
 
 // ==========================================
-// 4. TASKS DUE WEEK‑BY‑WEEK PER SECTION OFFICER
+// 4. TASKS DUE WEEK‑BY‑WEEK PER SECTION OFFICER (clickable counts)
 // ==========================================
+// 4. TASKS DUE WEEK‑BY‑WEEK PER SECTION OFFICER (clickable counts, scheme name added)
 function generateTasksDueWeekByWeek() {
   const { rawData } = getFilteredData();
   const today = state.reportDate||new Date();
   const dayOfWeek = today.getDay();
   const monday = new Date(today); monday.setDate(today.getDate()-((dayOfWeek+6)%7));
   const weeks=[];
-  for(let i=0;i<8;i++){const start=new Date(monday);start.setDate(start.getDate()+i*7);const end=new Date(start);end.setDate(end.getDate()+6);weeks.push({start,end,label:`${formatDate(start)} - ${formatDate(end)}`});}
-  const officerMap={};
-  rawData.forEach(task=>{if(!task.parsedDate)return;const officer=task.section_officer||'N/A';if(!officerMap[officer])officerMap[officer]=weeks.map(()=>0);const due=task.parsedDate;for(let i=0;i<weeks.length;i++){if(due>=weeks[i].start&&due<=weeks[i].end){officerMap[officer][i]++;break;}}});
-  const totals=weeks.map(()=>0);let grandTotal=0;
-  let headerRow='<th class="px-3 py-2 text-center align-top border">Officer</th>';weeks.forEach(w=>headerRow+=`<th class="px-3 py-2 text-center align-top border">${w.label}</th>`);headerRow+='<th class="px-3 py-2 text-center align-top border">Total</th>';
-  let bodyRows='';
-  Object.entries(officerMap).sort().forEach(([officer,counts])=>{let row=`<td class="px-3 py-2 font-medium border">${escapeHtml(officer)}</td>`;let total=0;counts.forEach((c,idx)=>{totals[idx]+=c;const highlight=c>0?'background-color:#cce5ff;font-weight:bold;':'';row+=`<td class="px-3 py-2 text-center border" style="${highlight}">${c}</td>`;total+=c;});grandTotal+=total;row+=`<td class="px-3 py-2 text-center font-bold border">${total}</td>`;bodyRows+=`<tr>${row}</tr>`;});
-  let totalsRow='<td class="px-3 py-2 font-bold border">Total</td>';totals.forEach(t=>totalsRow+=`<td class="px-3 py-2 text-center font-bold border">${t}</td>`);totalsRow+=`<td class="px-3 py-2 text-center font-bold border">${grandTotal}</td>`;
-  return `<h3 class="text-lg font-bold mb-2 text-center">Tasks Due Week‑By‑Week per Section Officer</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr>${headerRow}</tr></thead><tbody>${bodyRows}</tbody><tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot></table></div>`;
+  for(let i=0;i<8;i++){
+    const start=new Date(monday); start.setDate(start.getDate()+i*7);
+    const end=new Date(start); end.setDate(end.getDate()+6);
+    weeks.push({start,end,label:`${formatDate(start)} - ${formatDate(end)}`});
+  }
+
+  // Build a quick scheme name lookup
+  const schemeNameMap = {};
+  state.schemes.forEach(s => { schemeNameMap[s.scheme_id] = s.scheme_name; });
+
+  const officerTasks = {};
+  rawData.forEach(task => {
+    if (!task.parsedDate) return;
+    const officer = task.section_officer || 'N/A';
+    if (!officerTasks[officer]) {
+      officerTasks[officer] = Array.from({length: weeks.length}, () => []);
+    }
+    const due = task.parsedDate;
+    for (let i = 0; i < weeks.length; i++) {
+      if (due >= weeks[i].start && due <= weeks[i].end) {
+        officerTasks[officer][i].push(task);
+        break;
+      }
+    }
+  });
+
+  const totals = weeks.map(() => 0);
+  let grandTotal = 0;
+
+  let headerRow = '<th class="px-3 py-2 text-center align-top border">Officer</th>';
+  weeks.forEach(w => headerRow += `<th class="px-3 py-2 text-center align-top border">${w.label}</th>`);
+  headerRow += '<th class="px-3 py-2 text-center align-top border">Total</th>';
+
+  let bodyRows = '';
+  let detailRows = '';
+  Object.entries(officerTasks).sort().forEach(([officer, weekTasks]) => {
+    let row = `<td class="px-3 py-2 font-medium border">${escapeHtml(officer)}</td>`;
+    let total = 0;
+    weekTasks.forEach((tasks, idx) => {
+      totals[idx] += tasks.length;
+      total += tasks.length;
+      const count = tasks.length;
+      const highlight = count > 0 ? 'background-color: #cce5ff; font-weight: bold;' : '';
+      const toggleId = `week_${officer.replace(/\s+/g,'_')}_${idx}`;
+      row += `<td class="px-3 py-2 text-center border" style="${highlight}">
+        ${count > 0 ? `<span class="clickable-count" onclick="toggleWeekDetail('${toggleId}')">${count}</span>` : count}
+      </td>`;
+    });
+    grandTotal += total;
+    row += `<td class="px-3 py-2 text-center font-bold border">${total}</td>`;
+    bodyRows += `<tr>${row}</tr>`;
+
+    // Hidden detail rows for each week that has tasks
+    weekTasks.forEach((tasks, idx) => {
+      if (tasks.length > 0) {
+        const toggleId = `week_${officer.replace(/\s+/g,'_')}_${idx}`;
+        detailRows += `<tr id="${toggleId}" class="hidden-detail" style="display:none;"><td colspan="${weeks.length+2}" class="px-3 py-2 border" style="background:#f9f9f9;">
+          <table class="min-w-full text-sm border border-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-2 py-1 border">Scheme Name</th>
+                <th class="px-2 py-1 border">Component</th>
+                <th class="px-2 py-1 border">Task</th>
+                <th class="px-2 py-1 border">Due Date</th>
+              </tr>
+            </thead>
+            <tbody>${tasks.map(t => {
+              const schemeName = schemeNameMap[t.scheme_id] || t.scheme_id;
+              return `<tr>
+                <td class="px-2 py-1 border">${escapeHtml(schemeName)}</td>
+                <td class="px-2 py-1 border">${escapeHtml(t.component)}</td>
+                <td class="px-2 py-1 border">${escapeHtml(t.task)}</td>
+                <td class="px-2 py-1 border">${t.due_date || '-'}</td>
+              </tr>`;
+            }).join('')}</tbody>
+          </table>
+        </td></tr>`;
+      }
+    });
+  });
+
+  let totalsRow = '<td class="px-3 py-2 font-bold border">Total</td>';
+  totals.forEach(t => totalsRow += `<td class="px-3 py-2 text-center font-bold border">${t}</td>`);
+  totalsRow += `<td class="px-3 py-2 text-center font-bold border">${grandTotal}</td>`;
+
+  return `
+    <h3 class="text-lg font-bold mb-2 text-center">Tasks Due Week‑By‑Week per Section Officer</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border border-gray-300">
+        <thead class="bg-gray-100"><tr>${headerRow}</tr></thead>
+        <tbody>${bodyRows}${detailRows}</tbody>
+        <tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot>
+      </table>
+    </div>
+  `;
+}
+
+// Toggle for week details
+function toggleWeekDetail(id) {
+  const row = document.getElementById(id);
+  if (row) {
+    if (row.style.display === 'none' || row.classList.contains('hidden-detail')) {
+      row.classList.remove('hidden-detail');
+      row.style.display = 'table-row';
+    } else {
+      row.classList.add('hidden-detail');
+      row.style.display = 'none';
+    }
+  }
+}
+function attachWeekDetailToggleEvents() {
+  document.querySelectorAll('.hidden-detail').forEach(el => { el.style.display = 'none'; });
 }
 
 // ==========================================
@@ -2948,7 +3054,7 @@ function toggleDeadlineDetail(catId){
 function attachDeadlineToggleEvents(){document.querySelectorAll('.hidden-detail').forEach(el=>el.style.display='none');}
 
 // ==========================================
-// PRINT QUICK REPORT (working)
+// PRINT QUICK REPORT
 // ==========================================
 function printQuickReport() {
   const content = document.getElementById('quickReportContent').innerHTML;
@@ -3029,7 +3135,7 @@ function printQuickReport() {
           .clickable-count { text-decoration: underline; color: #2563eb; }
           @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .hidden-detail { display: block !important; }
+            .hidden-detail { display: table-row !important; }
             .action-plan-card { page-break-after: always; }
             .report-header-screen { display: none; }
           }
