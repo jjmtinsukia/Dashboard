@@ -2234,7 +2234,7 @@ ${schemesHTML}
 
 <!-- =============================================
  "What if Sumit Sir wants to know !!"  Feature
- (COMPLETE – all reports + Overdue Tasks)
+ (Section Officer filter, Action Plan first, print headers)
  ============================================= -->
 <style>
 @keyframes popTitle {
@@ -2253,6 +2253,11 @@ ${schemesHTML}
 }
 .clickable-count:hover { color: #1d4ed8; }
 .hidden-detail { display: none; }
+.action-plan-toggle { cursor: pointer; user-select: none; }
+.action-plan-toggle:hover { color: #2563eb; }
+@media print {
+  .action-plan-card { page-break-after: always; }
+}
 </style>
 
 <script>
@@ -2262,13 +2267,11 @@ ${schemesHTML}
 (function addQuickReportButton() {
   const roadmapContainer = document.getElementById('btnRoadmapDownload')?.parentNode;
   if (!roadmapContainer) return;
-
   const btn = document.createElement('button');
   btn.id = 'btnQuickReports';
   btn.className = 'ml-4 px-4 py-2 text-sm bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 font-medium transition-colors flex items-center shadow-md';
   btn.innerHTML = '<i class="fas fa-lightbulb mr-2"></i> Quick Reports';
   btn.addEventListener('click', openQuickReportModal);
-  
   roadmapContainer.appendChild(btn);
 })();
 
@@ -2276,30 +2279,28 @@ ${schemesHTML}
 // SECTION OFFICER → SUB‑DIVISION MAPPING
 // ==========================================
 const officerSubDivisionMap = {
-  "ANINDITA BHUYAN": "Tinsukia Sub Division",
-  "ANUPAM DAS": "Digboi Sub Division",
-  "ANUREKH PHUKON": "Tinsukia Sub Division",
-  "ASIF ALI": "Tinsukia Sub Division",
-  "AYANJYOTI DEORI": "Tinsukia Sub Division",
-  "JURI SONOWAL": "Digboi Sub Division",
-  "KRISHNA KAMAL GOHAIN": "Tinsukia Sub Division",
-  "NIHA NEWAR": "Digboi Sub Division",
-  "PADMINI TAMULI": "Tinsukia Sub Division",
-  "PARASHMONI GOGOI": "Digboi Sub Division",
-  "PARISHMITA PHUKON": "Digboi Sub Division",
-  "PRANAMIKA DAS": "Tinsukia Sub Division",
-  "PRANTOR BARUAH": "Digboi Sub Division",
-  "PUBALI CHUTIA": "Digboi Sub Division",
-  "PUJA MORAN": "Digboi Sub Division",
-  "RAJDEEP SHARMA": "Tinsukia Sub Division",
-  "RANJITA DAS": "Tinsukia Sub Division",
-  "RISHA GOGOI": "Tinsukia Sub Division",
-  "RUKSANA BEGUM": "Digboi Sub Division",
-  "SUMU GOGOI": "Tinsukia Sub Division"
+  "ANINDITA BHUYAN": "Tinsukia Sub Division","ANUPAM DAS": "Digboi Sub Division",
+  "ANUREKH PHUKON": "Tinsukia Sub Division","ASIF ALI": "Tinsukia Sub Division",
+  "AYANJYOTI DEORI": "Tinsukia Sub Division","JURI SONOWAL": "Digboi Sub Division",
+  "KRISHNA KAMAL GOHAIN": "Tinsukia Sub Division","NIHA NEWAR": "Digboi Sub Division",
+  "PADMINI TAMULI": "Tinsukia Sub Division","PARASHMONI GOGOI": "Digboi Sub Division",
+  "PARISHMITA PHUKON": "Digboi Sub Division","PRANAMIKA DAS": "Tinsukia Sub Division",
+  "PRANTOR BARUAH": "Digboi Sub Division","PUBALI CHUTIA": "Digboi Sub Division",
+  "PUJA MORAN": "Digboi Sub Division","RAJDEEP SHARMA": "Tinsukia Sub Division",
+  "RANJITA DAS": "Tinsukia Sub Division","RISHA GOGOI": "Tinsukia Sub Division",
+  "RUKSANA BEGUM": "Digboi Sub Division","SUMU GOGOI": "Tinsukia Sub Division"
 };
 
 // ==========================================
-// CREATE MODAL HTML (new Overdue option added)
+// HARD‑CODED PHYSICAL PROGRESS PER SCHEME ID
+// ==========================================
+const physicalProgressMap = {
+  "30147295": 75, "30077542": 99
+  // add more "SCHEME_ID": progress_value pairs
+};
+
+// ==========================================
+// CREATE MODAL HTML (Action Plan first + Section Officer filter)
 // ==========================================
 (function createQuickReportModal() {
   const modalHTML = `
@@ -2324,6 +2325,7 @@ const officerSubDivisionMap = {
               <select id="quickReportSelect" class="appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm" onchange="generateQuickReport()">
                 <option value="">-- Choose a Report --</option>
                 <option value="allReports">📋 ALL REPORTS (generate all at once)</option>
+                <option value="schemeActionPlan">Scheme‑Wise Action Plan</option>
                 <option value="schemesByDeadline">Schemes to be Completed by Deadline</option>
                 <option value="tasksDueWeekByWeek">Tasks Due Week‑By‑Week per Section Officer</option>
                 <option value="monthWiseSchemes">Month‑Wise Target vs Achievement (Schemes)</option>
@@ -2342,12 +2344,22 @@ const officerSubDivisionMap = {
               </div>
             </div>
 
-            <label class="text-xs font-bold text-gray-700 uppercase ml-4">Sub‑Division</label>
+            <label class="text-xs font-bold text-gray-700 uppercase ml-2">Sub‑Division</label>
             <div class="relative w-full sm:w-auto">
               <select id="quickReportSubDivision" class="appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm" onchange="generateQuickReport()">
                 <option value="">All Sub‑Divisions</option>
                 <option value="Tinsukia Sub Division">Tinsukia Sub Division</option>
                 <option value="Digboi Sub Division">Digboi Sub Division</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.25 7.5l4.75 4.75 4.75-4.75L16 8.5l-6 6-6-6z"/></svg>
+              </div>
+            </div>
+
+            <label class="text-xs font-bold text-gray-700 uppercase ml-2">Section Officer</label>
+            <div class="relative w-full sm:w-auto">
+              <select id="quickReportSectionOfficer" class="appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm" onchange="generateQuickReport()">
+                <option value="">All Section Officers</option>
               </select>
               <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
                 <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5.25 7.5l4.75 4.75 4.75-4.75L16 8.5l-6 6-6-6z"/></svg>
@@ -2365,13 +2377,15 @@ const officerSubDivisionMap = {
 })();
 
 // ==========================================
-// MODAL OPEN / CLOSE
+// MODAL OPEN / CLOSE (populate filters)
 // ==========================================
 function openQuickReportModal() {
   document.getElementById('quickReportModal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   document.getElementById('quickReportSelect').value = '';
   document.getElementById('quickReportSubDivision').value = '';
+  document.getElementById('quickReportSectionOfficer').value = '';
+  populateQuickReportSectionOfficers();
   document.getElementById('quickReportContent').innerHTML = '<p class="text-gray-500 text-center py-8">Please select a report from the dropdown above.</p>';
 }
 
@@ -2380,18 +2394,37 @@ function closeQuickReportModal() {
   document.body.style.overflow = '';
 }
 
+function populateQuickReportSectionOfficers() {
+  const select = document.getElementById('quickReportSectionOfficer');
+  const officers = [...new Set(state.schemes.map(s => s.section_officer).filter(Boolean))].sort();
+  select.innerHTML = '<option value="">All Section Officers</option>';
+  officers.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+  });
+}
+
 // ==========================================
-// UTILITY: GET FILTERED DATA
+// UTILITY: GET FILTERED DATA (both filters)
 // ==========================================
 function getFilteredData() {
   const subDivision = document.getElementById('quickReportSubDivision').value;
-  if (!subDivision) {
-    return { schemes: state.schemes, rawData: state.rawData };
+  const sectionOfficer = document.getElementById('quickReportSectionOfficer').value;
+  let filteredSchemes = [...state.schemes];
+
+  if (subDivision) {
+    filteredSchemes = filteredSchemes.filter(s => {
+      const officer = s.section_officer;
+      return officerSubDivisionMap[officer] === subDivision;
+    });
   }
-  const filteredSchemes = state.schemes.filter(s => {
-    const officer = s.section_officer;
-    return officerSubDivisionMap[officer] === subDivision;
-  });
+
+  if (sectionOfficer) {
+    filteredSchemes = filteredSchemes.filter(s => s.section_officer === sectionOfficer);
+  }
+
   const schemeIds = new Set(filteredSchemes.map(s => s.scheme_id));
   const filteredRaw = state.rawData.filter(r => schemeIds.has(r.scheme_id));
   return { schemes: filteredSchemes, rawData: filteredRaw };
@@ -2402,19 +2435,7 @@ function getFilteredData() {
 // ==========================================
 function formatDataBar(value) {
   const percent = Math.min(100, Math.max(0, value)).toFixed(1);
-  return `<span style="
-    display: inline-block;
-    width: 100%;
-    background: linear-gradient(to right, #f44336 0%, #ffeb3b 50%, #4caf50 100%);
-    background-size: ${percent}% 100%;
-    background-repeat: no-repeat;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-weight: bold;
-    text-align: center;
-    color: #000;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
-  ">${percent}%</span>`;
+  return `<span style="display:inline-block;width:100%;background:linear-gradient(to right,#f44336 0%,#ffeb3b 50%,#4caf50 100%);background-size:${percent}% 100%;background-repeat:no-repeat;padding:2px 6px;border-radius:3px;font-weight:bold;text-align:center;color:#000;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.1);">${percent}%</span>`;
 }
 
 // ==========================================
@@ -2432,6 +2453,7 @@ function generateQuickReport() {
     html = generateAllReports();
   } else {
     switch(type) {
+      case 'schemeActionPlan': html = generateSchemeActionPlan(); break;
       case 'schemesByDeadline': html = generateSchemesByDeadline(); break;
       case 'tasksDueWeekByWeek': html = generateTasksDueWeekByWeek(); break;
       case 'monthWiseSchemes': html = generateMonthWiseSchemes(); break;
@@ -2447,16 +2469,17 @@ function generateQuickReport() {
     }
   }
   document.getElementById('quickReportContent').innerHTML = wrapReport(html);
-  if (type === 'schemesByDeadline' || type === 'allReports') {
-    attachDeadlineToggleEvents();
-  }
+  if (type === 'schemesByDeadline' || type === 'allReports') attachDeadlineToggleEvents();
+  if (type === 'schemeActionPlan' || type === 'allReports') attachActionPlanToggleEvents();
 }
 
 // ==========================================
-// ALL REPORTS GENERATOR (Overdue included)
+// ALL REPORTS GENERATOR
 // ==========================================
 function generateAllReports() {
   return `
+    <div style="page-break-after: always;">${generateSchemeActionPlan()}</div>
+    <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
     <div style="page-break-after: always;">${generateSchemesByDeadline()}</div>
     <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
     <div style="page-break-after: always;">${generateTasksDueWeekByWeek()}</div>
@@ -2488,16 +2511,19 @@ function wrapReport(content) {
   const division = escapeHtml(state.scnDetails.divisionName || 'Tinsukia Division');
   const reportDate = formatDate(state.reportDate);
   const subDivision = document.getElementById('quickReportSubDivision').value;
-  const filterNote = subDivision ? ` (Sub‑Division: ${escapeHtml(subDivision)})` : '';
+  const sectionOfficer = document.getElementById('quickReportSectionOfficer').value;
+  let filterNote = '';
+  if (subDivision) filterNote += ` (Sub‑Division: ${escapeHtml(subDivision)})`;
+  if (sectionOfficer) filterNote += ` (Officer: ${escapeHtml(sectionOfficer)})`;
   return `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-      <div style="text-align: center; border-bottom: 2px solid #ccc; padding-bottom: 12px; margin-bottom: 20px;">
-        <h1 style="margin: 0; font-size: 22px; font-weight: bold; color: #1a1a1a;">Jal Jeevan Mission (JJM 2.0)</h1>
-        <div style="font-size: 14px; font-weight: 600; color: #444;">${division}${filterNote}</div>
-        <div style="font-size: 12px; color: #666; margin-top: 4px;">Report Date: ${reportDate}</div>
+    <div style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+      <div style="text-align:center;border-bottom:2px solid #ccc;padding-bottom:12px;margin-bottom:20px;" class="report-header-screen">
+        <h1 style="margin:0;font-size:22px;font-weight:bold;color:#1a1a1a;">Jal Jeevan Mission (JJM 2.0)</h1>
+        <div style="font-size:14px;font-weight:600;color:#444;">${division}${filterNote}</div>
+        <div style="font-size:12px;color:#666;margin-top:4px;">Report Date: ${reportDate}</div>
       </div>
       ${content}
-      <div style="text-align: center; font-size: 11px; color: #999; margin-top: 30px; padding-top: 10px; border-top: 1px solid #ddd;">
+      <div style="text-align:center;font-size:11px;color:#999;margin-top:30px;padding-top:10px;border-top:1px solid #ddd;">
         Generated by JJM 2.0 Monitoring System
       </div>
     </div>
@@ -2505,663 +2531,318 @@ function wrapReport(content) {
 }
 
 // ==========================================
-// ALL REPORT FUNCTIONS – FULLY DEFINED
+// EXTRACT PHYSICAL PROGRESS
+// ==========================================
+function extractPhysicalProgress(schemeId, schemeName) {
+  if (physicalProgressMap.hasOwnProperty(schemeId)) return physicalProgressMap[schemeId];
+  if (schemeName) {
+    const match = schemeName.match(/PWSS[-\s]*(\d+)/i);
+    if (match) return parseInt(match[1], 10);
+  }
+  return null;
+}
+
+// ==========================================
+// ALL REPORT FUNCTIONS (fully defined below)
 // ==========================================
 
-// 1. Schemes by Deadline
+// 1. Scheme‑Wise Action Plan
+function generateSchemeActionPlan() {
+  const { schemes, rawData } = getFilteredData();
+  const sortedSchemes = [...schemes].sort((a, b) => a.scheme_name.localeCompare(b.scheme_name));
+  let html = '';
+  sortedSchemes.forEach((scheme) => {
+    const tasks = rawData.filter(r => r.scheme_id === scheme.scheme_id);
+    tasks.sort((a, b) => {
+      if (!a.parsedDate && !b.parsedDate) return 0;
+      if (!a.parsedDate) return 1;
+      if (!b.parsedDate) return -1;
+      return a.parsedDate - b.parsedDate;
+    });
+    const physical = extractPhysicalProgress(scheme.scheme_id, scheme.scheme_name);
+    const progress = physical !== null ? physical : scheme.avg_completion;
+    const deadline = scheme.latestDueDate ? formatDate(scheme.latestDueDate) : 'No deadline';
+    const officer = escapeHtml(scheme.section_officer || 'N/A');
+    const collapseId = `ap_${scheme.scheme_id}`;
+    html += `
+    <div class="action-plan-card" style="margin-bottom:25px;border:1px solid #ddd;border-radius:6px;page-break-after:always;">
+      <div style="background:#f9fafb;padding:10px 15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;" class="action-plan-toggle" onclick="toggleActionPlanDetail('${collapseId}')">
+        <div>
+          <strong>${escapeHtml(scheme.scheme_name)}</strong>
+          <span style="margin-left:10px;color:#666;">(${escapeHtml(scheme.scheme_id)})</span>
+          <span style="margin-left:10px;color:#555;">Physical: ${progress}%</span>
+          <span style="margin-left:10px;color:#555;">Deadline: ${deadline}</span>
+          <span style="margin-left:10px;color:#555;">Officer: ${officer}</span>
+        </div>
+        <span style="font-size:18px;transform:rotate(0deg);transition:transform 0.2s;" id="${collapseId}_arrow">▶</span>
+      </div>
+      <div id="${collapseId}" class="hidden-detail" style="display:none;padding:10px 15px;">
+        <table class="min-w-full text-sm border border-gray-200">
+          <thead class="bg-gray-100"><tr><th class="px-3 py-1 border">Sl. No.</th><th class="px-3 py-1 border">Activity / Milestone</th><th class="px-3 py-1 border">Target Date</th></tr></thead>
+          <tbody>${tasks.length ? tasks.map((t,i) => `<tr><td class="px-3 py-1 text-center border">${i+1}</td><td class="px-3 py-1 border">${escapeHtml(t.component)} - ${escapeHtml(t.task)}</td><td class="px-3 py-1 border">${t.due_date||'-'}</td></tr>`).join('') : '<tr><td colspan="3" class="px-3 py-1 text-center border">No tasks defined</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>`;
+  });
+  return `<h3 class="text-lg font-bold mb-2 text-center">Scheme‑Wise Action Plan</h3><div>${html||'<p class="text-gray-500 text-center py-8">No schemes found.</p>'}</div>`;
+}
+
+// 2. Schemes by Deadline
 function generateSchemesByDeadline() {
   const { schemes } = getFilteredData();
-  const deadline1 = new Date(2026, 7, 15);
-  const deadline2 = new Date(2026, 8, 16);
-
-  const cat1 = [], cat2 = [], cat3 = [];
+  const deadline1 = new Date(2026,7,15), deadline2 = new Date(2026,8,16);
+  const cat1=[], cat2=[], cat3=[];
   schemes.forEach(s => {
-    if (!s.latestDueDate) cat3.push(s);
-    else if (s.latestDueDate <= deadline1) cat1.push(s);
-    else if (s.latestDueDate <= deadline2) cat2.push(s);
+    if(!s.latestDueDate) cat3.push(s);
+    else if(s.latestDueDate<=deadline1) cat1.push(s);
+    else if(s.latestDueDate<=deadline2) cat2.push(s);
     else cat3.push(s);
   });
-
-  cat1.sort((a, b) => a.latestDueDate - b.latestDueDate);
-  cat2.sort((a, b) => a.latestDueDate - b.latestDueDate);
-  cat3.sort((a, b) => {
-    if (!a.latestDueDate && !b.latestDueDate) return 0;
-    if (!a.latestDueDate) return 1;
-    if (!b.latestDueDate) return -1;
-    return a.latestDueDate - b.latestDueDate;
-  });
-
-  const renderCategory = (label, list, catId) => {
+  cat1.sort((a,b)=>a.latestDueDate-b.latestDueDate);
+  cat2.sort((a,b)=>a.latestDueDate-b.latestDueDate);
+  cat3.sort((a,b)=>{if(!a.latestDueDate&&!b.latestDueDate)return 0;if(!a.latestDueDate)return 1;if(!b.latestDueDate)return -1;return a.latestDueDate-b.latestDueDate;});
+  const renderCategory = (label,list,catId) => {
     const count = list.length;
-    return `<tr>
-      <td class="px-4 py-2 font-medium border">${label}</td>
-      <td class="px-4 py-2 text-center border">
-        <span class="clickable-count" onclick="toggleDeadlineDetail('${catId}')">${count}</span>
-        <div id="${catId}" class="hidden-detail mt-2">
-          <table class="min-w-full text-sm border border-gray-300 mt-1">
-            <thead class="bg-gray-100">
-              <tr>
-                <th class="px-3 py-1 border">Scheme Name</th>
-                <th class="px-3 py-1 border">Contractor</th>
-                <th class="px-3 py-1 border">Section Officer</th>
-                <th class="px-3 py-1 border">Final Due Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${list.length ? list.map(s => `<tr>
-                <td class="px-3 py-1 border">${escapeHtml(s.scheme_name)}</td>
-                <td class="px-3 py-1 border">${escapeHtml(s.contractor)}</td>
-                <td class="px-3 py-1 border">${escapeHtml(s.section_officer)}</td>
-                <td class="px-3 py-1 border">${s.latestDueDate ? formatDate(s.latestDueDate) : 'No date'}</td>
-              </tr>`).join('') : '<tr><td colspan="4" class="px-3 py-1 text-center border">No schemes</td></tr>'}
-            </tbody>
-          </table>
-        </div>
-      </td>
-    </tr>`;
+    return `<tr><td class="px-4 py-2 font-medium border">${label}</td><td class="px-4 py-2 text-center border"><span class="clickable-count" onclick="toggleDeadlineDetail('${catId}')">${count}</span><div id="${catId}" class="hidden-detail mt-2"><table class="min-w-full text-sm border border-gray-300 mt-1"><thead class="bg-gray-100"><tr><th class="px-3 py-1 border">Scheme Name</th><th class="px-3 py-1 border">Contractor</th><th class="px-3 py-1 border">Section Officer</th><th class="px-3 py-1 border">Final Due Date</th></tr></thead><tbody>${list.length?list.map(s=>`<tr><td class="px-3 py-1 border">${escapeHtml(s.scheme_name)}</td><td class="px-3 py-1 border">${escapeHtml(s.contractor)}</td><td class="px-3 py-1 border">${escapeHtml(s.section_officer)}</td><td class="px-3 py-1 border">${s.latestDueDate?formatDate(s.latestDueDate):'No date'}</td></tr>`).join(''):'<tr><td colspan="4" class="px-3 py-1 text-center border">No schemes</td></tr>'}</tbody></table></div></td></tr>`;
   };
-
-  return `
-    <h3 class="text-lg font-bold mb-2 text-center">Schemes to be Completed by Deadline</h3>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm border border-gray-300">
-        <thead class="bg-gray-100">
-          <tr>
-            <th class="px-4 py-2 text-left border">Deadline Category</th>
-            <th class="px-4 py-2 text-center border">Number of Schemes</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${renderCategory('By 15 August 2026 (on or before)', cat1, 'cat1')}
-          ${renderCategory('16 August 2026 – 15 September 2026', cat2, 'cat2')}
-          ${renderCategory('After 16 September 2026', cat3, 'cat3')}
-        </tbody>
-      </table>
-    </div>
-  `;
+  return `<h3 class="text-lg font-bold mb-2 text-center">Schemes to be Completed by Deadline</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr><th class="px-4 py-2 text-left border">Deadline Category</th><th class="px-4 py-2 text-center border">Number of Schemes</th></tr></thead><tbody>${renderCategory('By 15 August 2026 (on or before)',cat1,'cat1')}${renderCategory('16 August 2026 – 15 September 2026',cat2,'cat2')}${renderCategory('After 16 September 2026',cat3,'cat3')}</tbody></table></div>`;
 }
 
-// 2. Performance - Contractors
-function generateBestWorstContractors() {
-  const { schemes } = getFilteredData();
-  const map = {};
-  schemes.forEach(s => {
-    const c = s.contractor || 'N/A';
-    if (!map[c]) map[c] = { totalSchemes: 0, totalTasks: 0, totalCompletion: 0, critical: 0, upcoming: 0, scheduled: 0 };
-    map[c].totalSchemes++;
-    map[c].totalTasks += s.tasks;
-    map[c].totalCompletion += s.avg_completion * s.tasks;
-    map[c].critical += s.critical;
-    map[c].upcoming += s.upcoming;
-    map[c].scheduled += s.scheduled;
-  });
-  const arr = Object.entries(map).map(([contractor, data]) => ({
-    contractor,
-    schemes: data.totalSchemes,
-    tasks: data.totalTasks,
-    avgCompletion: data.totalTasks ? (data.totalCompletion / data.totalTasks).toFixed(1) : '0',
-    critical: data.critical,
-    upcoming: data.upcoming,
-    scheduled: data.scheduled
-  }));
-  arr.sort((a,b) => b.avgCompletion - a.avgCompletion);
-
-  let tableRows = '';
-  arr.forEach((item, idx) => {
-    const val = parseFloat(item.avgCompletion);
-    tableRows += `<tr>
-      <td class="px-3 py-2 text-center">${idx+1}</td>
-      <td class="px-3 py-2 font-medium">${escapeHtml(item.contractor)}</td>
-      <td class="px-3 py-2 text-center">${item.schemes}</td>
-      <td class="px-3 py-2 text-center">${item.tasks}</td>
-      <td class="px-3 py-2 text-center">${formatDataBar(val)}</td>
-      <td class="px-3 py-2 text-center">${item.critical}</td>
-      <td class="px-3 py-2 text-center">${item.upcoming}</td>
-      <td class="px-3 py-2 text-center">${item.scheduled}</td>
-    </tr>`;
-  });
-
-  return `
-    <h3 class="text-lg font-bold mb-2 text-center">Performance - Contractors by Average Completion</h3>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm border border-gray-300">
-        <thead class="bg-gray-100">
-          <tr>
-            <th class="px-3 py-2 text-center align-top border">Rank</th>
-            <th class="px-3 py-2 text-center align-top border">Contractor</th>
-            <th class="px-3 py-2 text-center align-top border">Schemes</th>
-            <th class="px-3 py-2 text-center align-top border">Tasks</th>
-            <th class="px-3 py-2 text-center align-top border">Avg. Completion</th>
-            <th class="px-3 py-2 text-center align-top border">Critical</th>
-            <th class="px-3 py-2 text-center align-top border">Upcoming</th>
-            <th class="px-3 py-2 text-center align-top border">Scheduled</th>
-          </tr>
-        </thead>
-        <tbody>${tableRows}</tbody>
-      </table>
-    </div>
-  `;
-}
-
-// 3. Performance - Section Officers
-function generateBestWorstOfficers() {
-  const { schemes } = getFilteredData();
-  const map = {};
-  schemes.forEach(s => {
-    const o = s.section_officer || 'N/A';
-    if (!map[o]) map[o] = { totalSchemes: 0, totalTasks: 0, totalCompletion: 0, critical: 0, upcoming: 0, scheduled: 0 };
-    map[o].totalSchemes++;
-    map[o].totalTasks += s.tasks;
-    map[o].totalCompletion += s.avg_completion * s.tasks;
-    map[o].critical += s.critical;
-    map[o].upcoming += s.upcoming;
-    map[o].scheduled += s.scheduled;
-  });
-  const arr = Object.entries(map).map(([officer, data]) => ({
-    officer,
-    schemes: data.totalSchemes,
-    tasks: data.totalTasks,
-    avgCompletion: data.totalTasks ? (data.totalCompletion / data.totalTasks).toFixed(1) : '0',
-    critical: data.critical,
-    upcoming: data.upcoming,
-    scheduled: data.scheduled
-  }));
-  arr.sort((a,b) => b.avgCompletion - a.avgCompletion);
-
-  let tableRows = '';
-  arr.forEach((item, idx) => {
-    const val = parseFloat(item.avgCompletion);
-    tableRows += `<tr>
-      <td class="px-3 py-2 text-center">${idx+1}</td>
-      <td class="px-3 py-2 font-medium">${escapeHtml(item.officer)}</td>
-      <td class="px-3 py-2 text-center">${item.schemes}</td>
-      <td class="px-3 py-2 text-center">${item.tasks}</td>
-      <td class="px-3 py-2 text-center">${formatDataBar(val)}</td>
-      <td class="px-3 py-2 text-center">${item.critical}</td>
-      <td class="px-3 py-2 text-center">${item.upcoming}</td>
-      <td class="px-3 py-2 text-center">${item.scheduled}</td>
-    </tr>`;
-  });
-
-  return `
-    <h3 class="text-lg font-bold mb-2 text-center">Performance - Section Officers by Average Completion</h3>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm border border-gray-300">
-        <thead class="bg-gray-100">
-          <tr>
-            <th class="px-3 py-2 text-center align-top border">Rank</th>
-            <th class="px-3 py-2 text-center align-top border">Section Officer</th>
-            <th class="px-3 py-2 text-center align-top border">Schemes</th>
-            <th class="px-3 py-2 text-center align-top border">Tasks</th>
-            <th class="px-3 py-2 text-center align-top border">Avg. Completion</th>
-            <th class="px-3 py-2 text-center align-top border">Critical</th>
-            <th class="px-3 py-2 text-center align-top border">Upcoming</th>
-            <th class="px-3 py-2 text-center align-top border">Scheduled</th>
-          </tr>
-        </thead>
-        <tbody>${tableRows}</tbody>
-      </table>
-    </div>
-  `;
-}
-
-// 4. Tasks Due Week‑By‑Week per Section Officer
+// 3. Tasks Due Week‑By‑Week per Section Officer
 function generateTasksDueWeekByWeek() {
   const { rawData } = getFilteredData();
-  const today = state.reportDate || new Date();
+  const today = state.reportDate||new Date();
   const dayOfWeek = today.getDay();
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
-  const weeks = [];
-  for (let i = 0; i < 8; i++) {
-    const start = new Date(monday);
-    start.setDate(start.getDate() + i * 7);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    weeks.push({ start, end, label: `${formatDate(start)} - ${formatDate(end)}` });
-  }
-
-  const officerMap = {};
-  rawData.forEach(task => {
-    if (!task.parsedDate) return;
-    const officer = task.section_officer || 'N/A';
-    if (!officerMap[officer]) officerMap[officer] = weeks.map(() => 0);
-    const due = task.parsedDate;
-    for (let i = 0; i < weeks.length; i++) {
-      if (due >= weeks[i].start && due <= weeks[i].end) { officerMap[officer][i]++; break; }
-    }
-  });
-
-  const totals = weeks.map(() => 0);
-  let grandTotal = 0;
-  let headerRow = '<th class="px-3 py-2 text-center align-top border">Officer</th>';
-  weeks.forEach(w => headerRow += `<th class="px-3 py-2 text-center align-top border">${w.label}</th>`);
-  headerRow += '<th class="px-3 py-2 text-center align-top border">Total</th>';
-
-  let bodyRows = '';
-  Object.entries(officerMap).sort().forEach(([officer, counts]) => {
-    let row = `<td class="px-3 py-2 font-medium border">${escapeHtml(officer)}</td>`;
-    let total = 0;
-    counts.forEach((c, idx) => {
-      totals[idx] += c;
-      const highlight = c > 0 ? 'background-color: #cce5ff; font-weight: bold;' : '';
-      row += `<td class="px-3 py-2 text-center border" style="${highlight}">${c}</td>`;
-      total += c;
-    });
-    grandTotal += total;
-    row += `<td class="px-3 py-2 text-center font-bold border">${total}</td>`;
-    bodyRows += `<tr>${row}</tr>`;
-  });
-
-  let totalsRow = '<td class="px-3 py-2 font-bold border">Total</td>';
-  totals.forEach(t => totalsRow += `<td class="px-3 py-2 text-center font-bold border">${t}</td>`);
-  totalsRow += `<td class="px-3 py-2 text-center font-bold border">${grandTotal}</td>`;
-
-  return `
-    <h3 class="text-lg font-bold mb-2 text-center">Tasks Due Week‑By‑Week per Section Officer</h3>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm border border-gray-300">
-        <thead class="bg-gray-100"><tr>${headerRow}</tr></thead>
-        <tbody>${bodyRows}</tbody>
-        <tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot>
-      </table>
-    </div>
-  `;
+  const monday = new Date(today); monday.setDate(today.getDate()-((dayOfWeek+6)%7));
+  const weeks=[];
+  for(let i=0;i<8;i++){const start=new Date(monday);start.setDate(start.getDate()+i*7);const end=new Date(start);end.setDate(end.getDate()+6);weeks.push({start,end,label:`${formatDate(start)} - ${formatDate(end)}`});}
+  const officerMap={};
+  rawData.forEach(task=>{if(!task.parsedDate)return;const officer=task.section_officer||'N/A';if(!officerMap[officer])officerMap[officer]=weeks.map(()=>0);const due=task.parsedDate;for(let i=0;i<weeks.length;i++){if(due>=weeks[i].start&&due<=weeks[i].end){officerMap[officer][i]++;break;}}});
+  const totals=weeks.map(()=>0);let grandTotal=0;
+  let headerRow='<th class="px-3 py-2 text-center align-top border">Officer</th>';weeks.forEach(w=>headerRow+=`<th class="px-3 py-2 text-center align-top border">${w.label}</th>`);headerRow+='<th class="px-3 py-2 text-center align-top border">Total</th>';
+  let bodyRows='';
+  Object.entries(officerMap).sort().forEach(([officer,counts])=>{let row=`<td class="px-3 py-2 font-medium border">${escapeHtml(officer)}</td>`;let total=0;counts.forEach((c,idx)=>{totals[idx]+=c;const highlight=c>0?'background-color:#cce5ff;font-weight:bold;':'';row+=`<td class="px-3 py-2 text-center border" style="${highlight}">${c}</td>`;total+=c;});grandTotal+=total;row+=`<td class="px-3 py-2 text-center font-bold border">${total}</td>`;bodyRows+=`<tr>${row}</tr>`;});
+  let totalsRow='<td class="px-3 py-2 font-bold border">Total</td>';totals.forEach(t=>totalsRow+=`<td class="px-3 py-2 text-center font-bold border">${t}</td>`);totalsRow+=`<td class="px-3 py-2 text-center font-bold border">${grandTotal}</td>`;
+  return `<h3 class="text-lg font-bold mb-2 text-center">Tasks Due Week‑By‑Week per Section Officer</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr>${headerRow}</tr></thead><tbody>${bodyRows}</tbody><tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot></table></div>`;
 }
 
-// 5. Component‑Wise Progress
-function generateComponentWise() {
-  const { rawData } = getFilteredData();
-  const map = {};
-  rawData.forEach(t => {
-    const comp = t.component || 'N/A';
-    if (!map[comp]) map[comp] = { tasks: 0, totalCompletion: 0, critical: 0, upcoming: 0, scheduled: 0 };
-    map[comp].tasks++;
-    map[comp].totalCompletion += t.completion;
-    const days = t.parsedDate ? Math.ceil((t.parsedDate - state.reportDate) / (1000*60*60*24)) : null;
-    if (days !== null && days < 7 && t.completion < 100) map[comp].critical++;
-    else if (days !== null && days >= 7 && days <= 30) map[comp].upcoming++;
-    else map[comp].scheduled++;
-  });
-  let rows = ''; let totalTasks = 0, totalCritical = 0, totalUpcoming = 0, totalScheduled = 0, totalCompletion = 0;
-  for (const [comp, d] of Object.entries(map)) {
-    totalTasks += d.tasks; totalCritical += d.critical; totalUpcoming += d.upcoming; totalScheduled += d.scheduled; totalCompletion += d.totalCompletion;
-    const avg = Math.round(d.totalCompletion / d.tasks);
-    rows += `<tr>
-      <td class="px-3 py-2 border">${escapeHtml(comp)}</td>
-      <td class="px-3 py-2 text-center border">${d.tasks}</td>
-      <td class="px-3 py-2 text-center border">${formatDataBar(avg)}</td>
-      <td class="px-3 py-2 text-center border">${d.critical}</td>
-      <td class="px-3 py-2 text-center border">${d.upcoming}</td>
-      <td class="px-3 py-2 text-center border">${d.scheduled}</td>
-    </tr>`;
-  }
-  const overallAvg = totalTasks ? Math.round(totalCompletion / totalTasks) : 0;
-  const totalsRow = `<td class="px-3 py-2 font-bold border">Total</td><td class="px-3 py-2 text-center font-bold border">${totalTasks}</td><td class="px-3 py-2 text-center font-bold border">${formatDataBar(overallAvg)}</td><td class="px-3 py-2 text-center font-bold border">${totalCritical}</td><td class="px-3 py-2 text-center font-bold border">${totalUpcoming}</td><td class="px-3 py-2 text-center font-bold border">${totalScheduled}</td>`;
-  return `
-    <h3 class="text-lg font-bold mb-2 text-center">Component‑Wise Progress</h3>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm border border-gray-300">
-        <thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Component</th><th class="px-3 py-2 text-center align-top border">Tasks</th><th class="px-3 py-2 text-center align-top border">Avg %</th><th class="px-3 py-2 text-center align-top border">Critical</th><th class="px-3 py-2 text-center align-top border">Upcoming</th><th class="px-3 py-2 text-center align-top border">Scheduled</th></tr></thead>
-        <tbody>${rows}</tbody>
-        <tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot>
-      </table>
-    </div>
-  `;
-}
-
-// 6. Month‑Wise Target vs Achievement (Schemes)
+// 4. Month‑Wise Target vs Achievement (Schemes)
 function generateMonthWiseSchemes() {
   const { schemes } = getFilteredData();
-  const monthMap = {};
-  schemes.forEach(s => {
-    if (!s.latestDueDate) return;
-    const key = `${s.latestDueDate.getFullYear()}-${String(s.latestDueDate.getMonth()+1).padStart(2,'0')}`;
-    if (!monthMap[key]) monthMap[key] = { schemes: 0, totalCompletion: 0 };
-    monthMap[key].schemes++;
-    monthMap[key].totalCompletion += s.avg_completion;
-  });
-  let rows = ''; let totalSchemes = 0, totalCompletion = 0;
-  Object.keys(monthMap).sort().forEach(month => {
-    const d = monthMap[month];
-    totalSchemes += d.schemes; totalCompletion += d.totalCompletion;
-    const actual = Math.round(d.totalCompletion / d.schemes);
-    rows += `<tr><td class="px-3 py-2 border">${month}</td><td class="px-3 py-2 text-center border">${d.schemes}</td><td class="px-3 py-2 text-center border">100%</td><td class="px-3 py-2 text-center border">${formatDataBar(actual)}</td></tr>`;
-  });
-  const overallActual = totalSchemes ? Math.round(totalCompletion / totalSchemes) : 0;
-  const totalsRow = `<td class="px-3 py-2 font-bold border">Total</td><td class="px-3 py-2 text-center font-bold border">${totalSchemes}</td><td class="px-3 py-2 text-center font-bold border">100%</td><td class="px-3 py-2 text-center font-bold border">${formatDataBar(overallActual)}</td>`;
-  return `
-    <h3 class="text-lg font-bold mb-2 text-center">Month‑Wise Target vs Achievement (Schemes)</h3>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm border border-gray-300">
-        <thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Month</th><th class="px-3 py-2 text-center align-top border">Schemes</th><th class="px-3 py-2 text-center align-top border">Target</th><th class="px-3 py-2 text-center align-top border">Actual</th></tr></thead>
-        <tbody>${rows}</tbody>
-        <tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot>
-      </table>
-    </div>
-  `;
+  const monthMap={};
+  schemes.forEach(s=>{if(!s.latestDueDate)return;const key=`${s.latestDueDate.getFullYear()}-${String(s.latestDueDate.getMonth()+1).padStart(2,'0')}`;if(!monthMap[key])monthMap[key]={schemes:0,totalCompletion:0};monthMap[key].schemes++;monthMap[key].totalCompletion+=s.avg_completion;});
+  let rows='',totalSchemes=0,totalCompletion=0;
+  Object.keys(monthMap).sort().forEach(month=>{const d=monthMap[month];totalSchemes+=d.schemes;totalCompletion+=d.totalCompletion;const actual=Math.round(d.totalCompletion/d.schemes);rows+=`<tr><td class="px-3 py-2 border">${month}</td><td class="px-3 py-2 text-center border">${d.schemes}</td><td class="px-3 py-2 text-center border">100%</td><td class="px-3 py-2 text-center border">${formatDataBar(actual)}</td></tr>`;});
+  const overallActual=totalSchemes?Math.round(totalCompletion/totalSchemes):0;
+  const totalsRow=`<td class="px-3 py-2 font-bold border">Total</td><td class="px-3 py-2 text-center font-bold border">${totalSchemes}</td><td class="px-3 py-2 text-center font-bold border">100%</td><td class="px-3 py-2 text-center font-bold border">${formatDataBar(overallActual)}</td>`;
+  return `<h3 class="text-lg font-bold mb-2 text-center">Month‑Wise Target vs Achievement (Schemes)</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Month</th><th class="px-3 py-2 text-center align-top border">Schemes</th><th class="px-3 py-2 text-center align-top border">Target</th><th class="px-3 py-2 text-center align-top border">Actual</th></tr></thead><tbody>${rows}</tbody><tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot></table></div>`;
 }
 
-// 7. Month‑Wise Target vs Achievement (Components)
-function generateMonthWiseComponents() {
-  const { rawData } = getFilteredData();
-  const map = {};
-  rawData.forEach(t => {
-    if (!t.parsedDate) return;
-    const comp = t.component || 'N/A';
-    const key = `${t.parsedDate.getFullYear()}-${String(t.parsedDate.getMonth()+1).padStart(2,'0')}`;
-    const fullKey = `${comp}|${key}`;
-    if (!map[fullKey]) map[fullKey] = { component: comp, month: key, tasks: 0, totalCompletion: 0 };
-    map[fullKey].tasks++;
-    map[fullKey].totalCompletion += t.completion;
-  });
-  let rows = ''; let totalTasks = 0, totalCompletion = 0;
-  Object.values(map).sort((a,b) => a.month.localeCompare(b.month) || a.component.localeCompare(b.component)).forEach(d => {
-    totalTasks += d.tasks; totalCompletion += d.totalCompletion;
-    const actual = Math.round(d.totalCompletion / d.tasks);
-    rows += `<tr><td class="px-3 py-2 border">${d.month}</td><td class="px-3 py-2 border">${escapeHtml(d.component)}</td><td class="px-3 py-2 text-center border">${d.tasks}</td><td class="px-3 py-2 text-center border">100%</td><td class="px-3 py-2 text-center border">${formatDataBar(actual)}</td></tr>`;
-  });
-  const overallActual = totalTasks ? Math.round(totalCompletion / totalTasks) : 0;
-  const totalsRow = `<td class="px-3 py-2 font-bold border" colspan="2">Total</td><td class="px-3 py-2 text-center font-bold border">${totalTasks}</td><td class="px-3 py-2 text-center font-bold border">100%</td><td class="px-3 py-2 text-center font-bold border">${formatDataBar(overallActual)}</td>`;
-  return `
-    <h3 class="text-lg font-bold mb-2 text-center">Month‑Wise Target vs Achievement (Components)</h3>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm border border-gray-300">
-        <thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Month</th><th class="px-3 py-2 text-center align-top border">Component</th><th class="px-3 py-2 text-center align-top border">Tasks</th><th class="px-3 py-2 text-center align-top border">Target</th><th class="px-3 py-2 text-center align-top border">Actual</th></tr></thead>
-        <tbody>${rows}</tbody>
-        <tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot>
-      </table>
-    </div>
-  `;
-}
-
-// 8. Month‑Wise Target vs Achievement (Tasks)
+// 5. Month‑Wise Target vs Achievement (Tasks)
 function generateMonthWiseTasks() {
   const { rawData } = getFilteredData();
-  const map = {};
-  rawData.forEach(t => {
-    if (!t.parsedDate) return;
-    const key = `${t.parsedDate.getFullYear()}-${String(t.parsedDate.getMonth()+1).padStart(2,'0')}`;
-    if (!map[key]) map[key] = { tasks: 0, totalCompletion: 0 };
-    map[key].tasks++;
-    map[key].totalCompletion += t.completion;
-  });
-  let rows = ''; let totalTasks = 0, totalCompletion = 0;
-  Object.keys(map).sort().forEach(month => {
-    const d = map[month];
-    totalTasks += d.tasks; totalCompletion += d.totalCompletion;
-    const actual = Math.round(d.totalCompletion / d.tasks);
-    rows += `<tr><td class="px-3 py-2 border">${month}</td><td class="px-3 py-2 text-center border">${d.tasks}</td><td class="px-3 py-2 text-center border">100%</td><td class="px-3 py-2 text-center border">${formatDataBar(actual)}</td></tr>`;
-  });
-  const overallActual = totalTasks ? Math.round(totalCompletion / totalTasks) : 0;
-  const totalsRow = `<td class="px-3 py-2 font-bold border">Total</td><td class="px-3 py-2 text-center font-bold border">${totalTasks}</td><td class="px-3 py-2 text-center font-bold border">100%</td><td class="px-3 py-2 text-center font-bold border">${formatDataBar(overallActual)}</td>`;
-  return `
-    <h3 class="text-lg font-bold mb-2 text-center">Month‑Wise Target vs Achievement (Tasks)</h3>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm border border-gray-300">
-        <thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Month</th><th class="px-3 py-2 text-center align-top border">Tasks</th><th class="px-3 py-2 text-center align-top border">Target</th><th class="px-3 py-2 text-center align-top border">Actual</th></tr></thead>
-        <tbody>${rows}</tbody>
-        <tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot>
-      </table>
-    </div>
-  `;
+  const map={};
+  rawData.forEach(t=>{if(!t.parsedDate)return;const key=`${t.parsedDate.getFullYear()}-${String(t.parsedDate.getMonth()+1).padStart(2,'0')}`;if(!map[key])map[key]={tasks:0,totalCompletion:0};map[key].tasks++;map[key].totalCompletion+=t.completion;});
+  let rows='',totalTasks=0,totalCompletion=0;
+  Object.keys(map).sort().forEach(month=>{const d=map[month];totalTasks+=d.tasks;totalCompletion+=d.totalCompletion;const actual=Math.round(d.totalCompletion/d.tasks);rows+=`<tr><td class="px-3 py-2 border">${month}</td><td class="px-3 py-2 text-center border">${d.tasks}</td><td class="px-3 py-2 text-center border">100%</td><td class="px-3 py-2 text-center border">${formatDataBar(actual)}</td></tr>`;});
+  const overallActual=totalTasks?Math.round(totalCompletion/totalTasks):0;
+  const totalsRow=`<td class="px-3 py-2 font-bold border">Total</td><td class="px-3 py-2 text-center font-bold border">${totalTasks}</td><td class="px-3 py-2 text-center font-bold border">100%</td><td class="px-3 py-2 text-center font-bold border">${formatDataBar(overallActual)}</td>`;
+  return `<h3 class="text-lg font-bold mb-2 text-center">Month‑Wise Target vs Achievement (Tasks)</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Month</th><th class="px-3 py-2 text-center align-top border">Tasks</th><th class="px-3 py-2 text-center align-top border">Target</th><th class="px-3 py-2 text-center align-top border">Actual</th></tr></thead><tbody>${rows}</tbody><tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot></table></div>`;
 }
 
-// 9. Tasks Due Week‑By‑Week per Scheme
+// 6. Component‑Wise Progress
+function generateComponentWise() {
+  const { rawData } = getFilteredData();
+  const map={};
+  rawData.forEach(t=>{const comp=t.component||'N/A';if(!map[comp])map[comp]={tasks:0,totalCompletion:0,critical:0,upcoming:0,scheduled:0};map[comp].tasks++;map[comp].totalCompletion+=t.completion;const days=t.parsedDate?Math.ceil((t.parsedDate-state.reportDate)/(1000*60*60*24)):null;if(days!==null&&days<7&&t.completion<100)map[comp].critical++;else if(days!==null&&days>=7&&days<=30)map[comp].upcoming++;else map[comp].scheduled++;});
+  let rows='',totalTasks=0,totalCritical=0,totalUpcoming=0,totalScheduled=0,totalCompletion=0;
+  for(const[comp,d]of Object.entries(map)){totalTasks+=d.tasks;totalCritical+=d.critical;totalUpcoming+=d.upcoming;totalScheduled+=d.scheduled;totalCompletion+=d.totalCompletion;const avg=Math.round(d.totalCompletion/d.tasks);rows+=`<tr><td class="px-3 py-2 border">${escapeHtml(comp)}</td><td class="px-3 py-2 text-center border">${d.tasks}</td><td class="px-3 py-2 text-center border">${formatDataBar(avg)}</td><td class="px-3 py-2 text-center border">${d.critical}</td><td class="px-3 py-2 text-center border">${d.upcoming}</td><td class="px-3 py-2 text-center border">${d.scheduled}</td></tr>`;}
+  const overallAvg=totalTasks?Math.round(totalCompletion/totalTasks):0;
+  const totalsRow=`<td class="px-3 py-2 font-bold border">Total</td><td class="px-3 py-2 text-center font-bold border">${totalTasks}</td><td class="px-3 py-2 text-center font-bold border">${formatDataBar(overallAvg)}</td><td class="px-3 py-2 text-center font-bold border">${totalCritical}</td><td class="px-3 py-2 text-center font-bold border">${totalUpcoming}</td><td class="px-3 py-2 text-center font-bold border">${totalScheduled}</td>`;
+  return `<h3 class="text-lg font-bold mb-2 text-center">Component‑Wise Progress</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Component</th><th class="px-3 py-2 text-center align-top border">Tasks</th><th class="px-3 py-2 text-center align-top border">Avg %</th><th class="px-3 py-2 text-center align-top border">Critical</th><th class="px-3 py-2 text-center align-top border">Upcoming</th><th class="px-3 py-2 text-center align-top border">Scheduled</th></tr></thead><tbody>${rows}</tbody><tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot></table></div>`;
+}
+
+// 7. Tasks Due Week‑By‑Week per Scheme
 function generateTasksDueWeekByWeekScheme() {
   const { schemes, rawData } = getFilteredData();
-  const today = state.reportDate || new Date();
+  const today = state.reportDate||new Date();
   const dayOfWeek = today.getDay();
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
-  const weeks = [];
-  for (let i = 0; i < 8; i++) {
-    const start = new Date(monday);
-    start.setDate(start.getDate() + i * 7);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    weeks.push({ start, end, label: `${formatDate(start)} - ${formatDate(end)}` });
-  }
-
-  const schemeMap = {};
-  schemes.forEach(s => {
-    schemeMap[s.scheme_id] = {
-      name: s.scheme_name,
-      counts: weeks.map(() => 0)
-    };
-  });
-
-  rawData.forEach(task => {
-    if (!task.parsedDate) return;
-    const entry = schemeMap[task.scheme_id];
-    if (!entry) return;
-    const due = task.parsedDate;
-    for (let i = 0; i < weeks.length; i++) {
-      if (due >= weeks[i].start && due <= weeks[i].end) {
-        entry.counts[i]++;
-        break;
-      }
-    }
-  });
-
-  const totals = weeks.map(() => 0);
-  let grandTotal = 0;
-  let headerRow = '<th class="px-3 py-2 text-center align-top border">Scheme</th>';
-  weeks.forEach(w => headerRow += `<th class="px-3 py-2 text-center align-top border">${w.label}</th>`);
-  headerRow += '<th class="px-3 py-2 text-center align-top border">Total</th>';
-
-  let bodyRows = '';
-  Object.entries(schemeMap).forEach(([id, entry]) => {
-    let row = `<td class="px-3 py-2 font-medium border">${escapeHtml(entry.name)}</td>`;
-    let total = 0;
-    entry.counts.forEach((c, idx) => {
-      totals[idx] += c;
-      const highlight = c > 0 ? 'background-color: #cce5ff; font-weight: bold;' : '';
-      row += `<td class="px-3 py-2 text-center border" style="${highlight}">${c}</td>`;
-      total += c;
-    });
-    grandTotal += total;
-    row += `<td class="px-3 py-2 text-center font-bold border">${total}</td>`;
-    bodyRows += `<tr>${row}</tr>`;
-  });
-
-  let totalsRow = '<td class="px-3 py-2 font-bold border">Total</td>';
-  totals.forEach(t => totalsRow += `<td class="px-3 py-2 text-center font-bold border">${t}</td>`);
-  totalsRow += `<td class="px-3 py-2 text-center font-bold border">${grandTotal}</td>`;
-
-  return `
-    <h3 class="text-lg font-bold mb-2 text-center">Tasks Due Week‑By‑Week per Scheme</h3>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm border border-gray-300">
-        <thead class="bg-gray-100"><tr>${headerRow}</tr></thead>
-        <tbody>${bodyRows}</tbody>
-        <tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot>
-      </table>
-    </div>
-  `;
+  const monday = new Date(today); monday.setDate(today.getDate()-((dayOfWeek+6)%7));
+  const weeks=[];
+  for(let i=0;i<8;i++){const start=new Date(monday);start.setDate(start.getDate()+i*7);const end=new Date(start);end.setDate(end.getDate()+6);weeks.push({start,end,label:`${formatDate(start)} - ${formatDate(end)}`});}
+  const schemeMap={};
+  schemes.forEach(s=>{schemeMap[s.scheme_id]={name:s.scheme_name,counts:weeks.map(()=>0)};});
+  rawData.forEach(task=>{if(!task.parsedDate)return;const entry=schemeMap[task.scheme_id];if(!entry)return;const due=task.parsedDate;for(let i=0;i<weeks.length;i++){if(due>=weeks[i].start&&due<=weeks[i].end){entry.counts[i]++;break;}}});
+  const totals=weeks.map(()=>0);let grandTotal=0;
+  let headerRow='<th class="px-3 py-2 text-center align-top border">Scheme</th>';weeks.forEach(w=>headerRow+=`<th class="px-3 py-2 text-center align-top border">${w.label}</th>`);headerRow+='<th class="px-3 py-2 text-center align-top border">Total</th>';
+  let bodyRows='';
+  Object.entries(schemeMap).forEach(([id,entry])=>{let row=`<td class="px-3 py-2 font-medium border">${escapeHtml(entry.name)}</td>`;let total=0;entry.counts.forEach((c,idx)=>{totals[idx]+=c;const highlight=c>0?'background-color:#cce5ff;font-weight:bold;':'';row+=`<td class="px-3 py-2 text-center border" style="${highlight}">${c}</td>`;total+=c;});grandTotal+=total;row+=`<td class="px-3 py-2 text-center font-bold border">${total}</td>`;bodyRows+=`<tr>${row}</tr>`;});
+  let totalsRow='<td class="px-3 py-2 font-bold border">Total</td>';totals.forEach(t=>totalsRow+=`<td class="px-3 py-2 text-center font-bold border">${t}</td>`);totalsRow+=`<td class="px-3 py-2 text-center font-bold border">${grandTotal}</td>`;
+  return `<h3 class="text-lg font-bold mb-2 text-center">Tasks Due Week‑By‑Week per Scheme</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr>${headerRow}</tr></thead><tbody>${bodyRows}</tbody><tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot></table></div>`;
 }
 
-// 10. Gantt Chart – Scheme (sorted by due date)
+// 8. Gantt Chart – Scheme
 function generateGanttChartScheme() {
   const { schemes } = getFilteredData();
-  const sortedSchemes = [...schemes].sort((a, b) => {
-    if (!a.latestDueDate && !b.latestDueDate) return 0;
-    if (!a.latestDueDate) return 1;
-    if (!b.latestDueDate) return -1;
-    return a.latestDueDate - b.latestDueDate;
-  });
-
-  const months = [
-    { label: 'Jun', month: 5 },
-    { label: 'Jul', month: 6 },
-    { label: 'Aug', month: 7 },
-    { label: 'Sep', month: 8 }
-  ];
-
-  let headerRow = '<th class="px-3 py-2 text-left align-top border">Scheme</th>';
-  months.forEach(m => headerRow += `<th class="px-3 py-2 text-center align-top border">${m.label}</th>`);
-
-  let bodyRows = '';
-  sortedSchemes.forEach(s => {
-    let row = `<td class="px-3 py-2 font-medium border">${escapeHtml(s.scheme_name)}</td>`;
-    months.forEach(m => {
-      let marker = '';
-      if (s.latestDueDate && s.latestDueDate.getMonth() === m.month && s.latestDueDate.getFullYear() === 2026) {
-        marker = '<span style="display:inline-block; width:12px; height:12px; background:#4caf50; border-radius:50%;"></span>';
-      }
-      row += `<td class="px-3 py-2 text-center border">${marker}</td>`;
-    });
-    bodyRows += `<tr>${row}</tr>`;
-  });
-
-  return `
-    <h3 class="text-lg font-bold mb-2 text-center">Gantt Chart – Scheme Due Month</h3>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm border border-gray-300">
-        <thead class="bg-gray-100"><tr>${headerRow}</tr></thead>
-        <tbody>${bodyRows}</tbody>
-      </table>
-    </div>
-    <p class="text-xs text-gray-500 mt-1">● Green circle indicates the scheme's final due date falls in that month. Sorted by earliest due date.</p>
-  `;
+  const sortedSchemes = [...schemes].sort((a,b)=>{if(!a.latestDueDate&&!b.latestDueDate)return 0;if(!a.latestDueDate)return 1;if(!b.latestDueDate)return -1;return a.latestDueDate-b.latestDueDate;});
+  const months=[{label:'Jun',month:5},{label:'Jul',month:6},{label:'Aug',month:7},{label:'Sep',month:8}];
+  let headerRow='<th class="px-3 py-2 text-left align-top border">Scheme</th>';months.forEach(m=>headerRow+=`<th class="px-3 py-2 text-center align-top border">${m.label}</th>`);
+  let bodyRows='';
+  sortedSchemes.forEach(s=>{let row=`<td class="px-3 py-2 font-medium border">${escapeHtml(s.scheme_name)}</td>`;months.forEach(m=>{let marker='';if(s.latestDueDate&&s.latestDueDate.getMonth()===m.month&&s.latestDueDate.getFullYear()===2026)marker='<span style="display:inline-block;width:12px;height:12px;background:#4caf50;border-radius:50%;"></span>';row+=`<td class="px-3 py-2 text-center border">${marker}</td>`;});bodyRows+=`<tr>${row}</tr>`;});
+  return `<h3 class="text-lg font-bold mb-2 text-center">Gantt Chart – Scheme Due Month</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr>${headerRow}</tr></thead><tbody>${bodyRows}</tbody></table></div><p class="text-xs text-gray-500 mt-1">● Green circle = final due month. Sorted by earliest due date.</p>`;
 }
 
-// 11. Gantt Chart – Section Officer (sorted by due date)
+// 9. Gantt Chart – Section Officer
 function generateGanttChartOfficer() {
   const { schemes } = getFilteredData();
-  const sortedSchemes = [...schemes].sort((a, b) => {
-    if (!a.latestDueDate && !b.latestDueDate) return 0;
-    if (!a.latestDueDate) return 1;
-    if (!b.latestDueDate) return -1;
-    return a.latestDueDate - b.latestDueDate;
-  });
-
-  const officerGroups = {};
-  sortedSchemes.forEach(s => {
-    const officer = s.section_officer || 'N/A';
-    if (!officerGroups[officer]) officerGroups[officer] = [];
-    officerGroups[officer].push(s);
-  });
-
-  const months = [
-    { label: 'Jun', month: 5 },
-    { label: 'Jul', month: 6 },
-    { label: 'Aug', month: 7 },
-    { label: 'Sep', month: 8 }
-  ];
-
-  let headerRow = '<th class="px-3 py-2 text-left align-top border">Section Officer / Scheme</th>';
-  months.forEach(m => headerRow += `<th class="px-3 py-2 text-center align-top border">${m.label}</th>`);
-
-  let bodyRows = '';
-  Object.keys(officerGroups).sort().forEach(officer => {
-    bodyRows += `<tr style="background: #f9f9f9; font-weight: bold;"><td class="px-3 py-2 border" colspan="5">${escapeHtml(officer)}</td></tr>`;
-    officerGroups[officer].forEach(s => {
-      let row = `<td class="px-3 py-2 pl-6 font-medium border">${escapeHtml(s.scheme_name)}</td>`;
-      months.forEach(m => {
-        let marker = '';
-        if (s.latestDueDate && s.latestDueDate.getMonth() === m.month && s.latestDueDate.getFullYear() === 2026) {
-          marker = '<span style="display:inline-block; width:12px; height:12px; background:#4caf50; border-radius:50%;"></span>';
-        }
-        row += `<td class="px-3 py-2 text-center border">${marker}</td>`;
-      });
-      bodyRows += `<tr>${row}</tr>`;
-    });
-  });
-
-  return `
-    <h3 class="text-lg font-bold mb-2 text-center">Gantt Chart – Section Officer / Scheme Due Month</h3>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm border border-gray-300">
-        <thead class="bg-gray-100"><tr>${headerRow}</tr></thead>
-        <tbody>${bodyRows}</tbody>
-      </table>
-    </div>
-    <p class="text-xs text-gray-500 mt-1">● Green circle indicates the scheme's final due date falls in that month. Sorted by earliest due date.</p>
-  `;
+  const sortedSchemes = [...schemes].sort((a,b)=>{if(!a.latestDueDate&&!b.latestDueDate)return 0;if(!a.latestDueDate)return 1;if(!b.latestDueDate)return -1;return a.latestDueDate-b.latestDueDate;});
+  const officerGroups={};
+  sortedSchemes.forEach(s=>{const officer=s.section_officer||'N/A';if(!officerGroups[officer])officerGroups[officer]=[];officerGroups[officer].push(s);});
+  const months=[{label:'Jun',month:5},{label:'Jul',month:6},{label:'Aug',month:7},{label:'Sep',month:8}];
+  let headerRow='<th class="px-3 py-2 text-left align-top border">Section Officer / Scheme</th>';months.forEach(m=>headerRow+=`<th class="px-3 py-2 text-center align-top border">${m.label}</th>`);
+  let bodyRows='';
+  Object.keys(officerGroups).sort().forEach(officer=>{bodyRows+=`<tr style="background:#f9f9f9;font-weight:bold;"><td class="px-3 py-2 border" colspan="5">${escapeHtml(officer)}</td></tr>`;officerGroups[officer].forEach(s=>{let row=`<td class="px-3 py-2 pl-6 font-medium border">${escapeHtml(s.scheme_name)}</td>`;months.forEach(m=>{let marker='';if(s.latestDueDate&&s.latestDueDate.getMonth()===m.month&&s.latestDueDate.getFullYear()===2026)marker='<span style="display:inline-block;width:12px;height:12px;background:#4caf50;border-radius:50%;"></span>';row+=`<td class="px-3 py-2 text-center border">${marker}</td>`;});bodyRows+=`<tr>${row}</tr>`;});});
+  return `<h3 class="text-lg font-bold mb-2 text-center">Gantt Chart – Section Officer / Scheme Due Month</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr>${headerRow}</tr></thead><tbody>${bodyRows}</tbody></table></div><p class="text-xs text-gray-500 mt-1">● Green circle = final due month. Sorted by earliest due date.</p>`;
 }
 
-// 12. List of Overdue Tasks (new)
+// 10. List of Overdue Tasks
 function generateOverdueTasks() {
   const { rawData } = getFilteredData();
-  const today = state.reportDate || new Date();
-  // Filter tasks that are past their due date and not 100% complete
-  const overdueTasks = rawData.filter(task => {
-    return task.parsedDate && task.parsedDate < today && task.completion < 100;
-  });
-
-  // Sort by most overdue first (largest negative days)
-  overdueTasks.sort((a, b) => a.parsedDate - b.parsedDate);
-
-  let rows = '';
-  overdueTasks.forEach((task, idx) => {
-    // Find scheme info
-    const scheme = state.schemes.find(s => s.scheme_id === task.scheme_id);
-    const schemeName = scheme ? scheme.scheme_name : task.scheme_id;
-    const contractorName = scheme ? scheme.contractor : 'N/A';
-    const overdueDays = Math.ceil((today - task.parsedDate) / (1000 * 60 * 60 * 24));
-    rows += `<tr>
-      <td class="px-3 py-2 text-center border">${idx + 1}</td>
-      <td class="px-3 py-2 border">${escapeHtml(schemeName)}</td>
-      <td class="px-3 py-2 border">${escapeHtml(contractorName)}</td>
-      <td class="px-3 py-2 border">${escapeHtml(task.component)}</td>
-      <td class="px-3 py-2 border">${escapeHtml(task.task)}</td>
-      <td class="px-3 py-2 text-center border">${overdueDays} day${overdueDays !== 1 ? 's' : ''}</td>
-    </tr>`;
-  });
-
-  return `
-    <h3 class="text-lg font-bold mb-2 text-center">List of Overdue Tasks</h3>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm border border-gray-300">
-        <thead class="bg-gray-100">
-          <tr>
-            <th class="px-3 py-2 text-center align-top border">SL No.</th>
-            <th class="px-3 py-2 text-left align-top border">Scheme Name</th>
-            <th class="px-3 py-2 text-left align-top border">Contractor Name</th>
-            <th class="px-3 py-2 text-left align-top border">Component</th>
-            <th class="px-3 py-2 text-left align-top border">Task</th>
-            <th class="px-3 py-2 text-center align-top border">Overdue by</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows || '<tr><td colspan="6" class="px-3 py-2 text-center border">No overdue tasks found.</td></tr>'}
-        </tbody>
-      </table>
-    </div>
-  `;
+  const today = new Date();
+  const overdueTasks = rawData.filter(task=>task.parsedDate&&task.parsedDate<today&&task.completion<100);
+  overdueTasks.sort((a,b)=>a.parsedDate-b.parsedDate);
+  let rows='';
+  overdueTasks.forEach((task,idx)=>{const scheme=state.schemes.find(s=>s.scheme_id===task.scheme_id);const schemeName=scheme?scheme.scheme_name:task.scheme_id;const contractorName=scheme?scheme.contractor:'N/A';const overdueDays=Math.ceil((today-task.parsedDate)/(1000*60*60*24));rows+=`<tr><td class="px-3 py-2 text-center border">${idx+1}</td><td class="px-3 py-2 border">${escapeHtml(schemeName)}</td><td class="px-3 py-2 border">${escapeHtml(contractorName)}</td><td class="px-3 py-2 border">${escapeHtml(task.component)}</td><td class="px-3 py-2 border">${escapeHtml(task.task)}</td><td class="px-3 py-2 text-center border">${overdueDays} day${overdueDays!==1?'s':''}</td></tr>`;});
+  return `<h3 class="text-lg font-bold mb-2 text-center">List of Overdue Tasks</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">SL No.</th><th class="px-3 py-2 text-left align-top border">Scheme Name</th><th class="px-3 py-2 text-left align-top border">Contractor Name</th><th class="px-3 py-2 text-left align-top border">Component</th><th class="px-3 py-2 text-left align-top border">Task</th><th class="px-3 py-2 text-center align-top border">Overdue by</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="px-3 py-2 text-center border">No overdue tasks found.</td></tr>'}</tbody></table></div>`;
 }
 
-// Toggle deadline details
-function toggleDeadlineDetail(catId) {
-  const detailDiv = document.getElementById(catId);
-  if (detailDiv) {
-    if (detailDiv.style.display === 'none' || detailDiv.classList.contains('hidden-detail')) {
-      detailDiv.classList.remove('hidden-detail');
-      detailDiv.style.display = 'block';
-    } else {
-      detailDiv.classList.add('hidden-detail');
-      detailDiv.style.display = 'none';
-    }
-  }
+// 11. Performance - Contractors
+function generateBestWorstContractors() {
+  const { schemes } = getFilteredData();
+  const map={};
+  schemes.forEach(s=>{const c=s.contractor||'N/A';if(!map[c])map[c]={totalSchemes:0,totalTasks:0,totalCompletion:0,critical:0,upcoming:0,scheduled:0};map[c].totalSchemes++;map[c].totalTasks+=s.tasks;map[c].totalCompletion+=s.avg_completion*s.tasks;map[c].critical+=s.critical;map[c].upcoming+=s.upcoming;map[c].scheduled+=s.scheduled;});
+  const arr=Object.entries(map).map(([contractor,data])=>({contractor,schemes:data.totalSchemes,tasks:data.totalTasks,avgCompletion:data.totalTasks?(data.totalCompletion/data.totalTasks).toFixed(1):'0',critical:data.critical,upcoming:data.upcoming,scheduled:data.scheduled}));
+  arr.sort((a,b)=>b.avgCompletion-a.avgCompletion);
+  let tableRows='';
+  arr.forEach((item,idx)=>{const val=parseFloat(item.avgCompletion);tableRows+=`<tr><td class="px-3 py-2 text-center">${idx+1}</td><td class="px-3 py-2 font-medium">${escapeHtml(item.contractor)}</td><td class="px-3 py-2 text-center">${item.schemes}</td><td class="px-3 py-2 text-center">${item.tasks}</td><td class="px-3 py-2 text-center">${formatDataBar(val)}</td><td class="px-3 py-2 text-center">${item.critical}</td><td class="px-3 py-2 text-center">${item.upcoming}</td><td class="px-3 py-2 text-center">${item.scheduled}</td></tr>`;});
+  return `<h3 class="text-lg font-bold mb-2 text-center">Performance - Contractors by Average Completion</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Rank</th><th class="px-3 py-2 text-center align-top border">Contractor</th><th class="px-3 py-2 text-center align-top border">Schemes</th><th class="px-3 py-2 text-center align-top border">Tasks</th><th class="px-3 py-2 text-center align-top border">Avg. Completion</th><th class="px-3 py-2 text-center align-top border">Critical</th><th class="px-3 py-2 text-center align-top border">Upcoming</th><th class="px-3 py-2 text-center align-top border">Scheduled</th></tr></thead><tbody>${tableRows}</tbody></table></div>`;
 }
 
-function attachDeadlineToggleEvents() {
-  document.querySelectorAll('.hidden-detail').forEach(el => el.style.display = 'none');
+// 12. Performance - Section Officers
+function generateBestWorstOfficers() {
+  const { schemes } = getFilteredData();
+  const map={};
+  schemes.forEach(s=>{const o=s.section_officer||'N/A';if(!map[o])map[o]={totalSchemes:0,totalTasks:0,totalCompletion:0,critical:0,upcoming:0,scheduled:0};map[o].totalSchemes++;map[o].totalTasks+=s.tasks;map[o].totalCompletion+=s.avg_completion*s.tasks;map[o].critical+=s.critical;map[o].upcoming+=s.upcoming;map[o].scheduled+=s.scheduled;});
+  const arr=Object.entries(map).map(([officer,data])=>({officer,schemes:data.totalSchemes,tasks:data.totalTasks,avgCompletion:data.totalTasks?(data.totalCompletion/data.totalTasks).toFixed(1):'0',critical:data.critical,upcoming:data.upcoming,scheduled:data.scheduled}));
+  arr.sort((a,b)=>b.avgCompletion-a.avgCompletion);
+  let tableRows='';
+  arr.forEach((item,idx)=>{const val=parseFloat(item.avgCompletion);tableRows+=`<tr><td class="px-3 py-2 text-center">${idx+1}</td><td class="px-3 py-2 font-medium">${escapeHtml(item.officer)}</td><td class="px-3 py-2 text-center">${item.schemes}</td><td class="px-3 py-2 text-center">${item.tasks}</td><td class="px-3 py-2 text-center">${formatDataBar(val)}</td><td class="px-3 py-2 text-center">${item.critical}</td><td class="px-3 py-2 text-center">${item.upcoming}</td><td class="px-3 py-2 text-center">${item.scheduled}</td></tr>`;});
+  return `<h3 class="text-lg font-bold mb-2 text-center">Performance - Section Officers by Average Completion</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Rank</th><th class="px-3 py-2 text-center align-top border">Section Officer</th><th class="px-3 py-2 text-center align-top border">Schemes</th><th class="px-3 py-2 text-center align-top border">Tasks</th><th class="px-3 py-2 text-center align-top border">Avg. Completion</th><th class="px-3 py-2 text-center align-top border">Critical</th><th class="px-3 py-2 text-center align-top border">Upcoming</th><th class="px-3 py-2 text-center align-top border">Scheduled</th></tr></thead><tbody>${tableRows}</tbody></table></div>`;
 }
 
 // ==========================================
-// PRINT QUICK REPORT
+// TOGGLE FUNCTIONS
+// ==========================================
+function toggleActionPlanDetail(id) {
+  const detailDiv = document.getElementById(id);
+  const arrow = document.getElementById(id+'_arrow');
+  if(detailDiv){
+    if(detailDiv.style.display==='none'||detailDiv.classList.contains('hidden-detail')){
+      detailDiv.classList.remove('hidden-detail');detailDiv.style.display='block';
+      if(arrow)arrow.style.transform='rotate(90deg)';
+    }else{
+      detailDiv.classList.add('hidden-detail');detailDiv.style.display='none';
+      if(arrow)arrow.style.transform='rotate(0deg)';
+    }
+  }
+}
+function attachActionPlanToggleEvents(){document.querySelectorAll('.hidden-detail').forEach(el=>el.style.display='none');}
+function toggleDeadlineDetail(catId){
+  const detailDiv=document.getElementById(catId);
+  if(detailDiv){
+    if(detailDiv.style.display==='none'||detailDiv.classList.contains('hidden-detail')){
+      detailDiv.classList.remove('hidden-detail');detailDiv.style.display='block';
+    }else{
+      detailDiv.classList.add('hidden-detail');detailDiv.style.display='none';
+    }
+  }
+}
+function attachDeadlineToggleEvents(){document.querySelectorAll('.hidden-detail').forEach(el=>el.style.display='none');}
+
+// ==========================================
+// PRINT QUICK REPORT (header/footer on every page)
 // ==========================================
 function printQuickReport() {
   const content = document.getElementById('quickReportContent').innerHTML;
+  const division = escapeHtml(state.scnDetails.divisionName || 'Tinsukia Division');
+  const reportDate = formatDate(state.reportDate);
+  const subDivision = document.getElementById('quickReportSubDivision').value;
+  const sectionOfficer = document.getElementById('quickReportSectionOfficer').value;
+  let filterNote = '';
+  if(subDivision) filterNote += ` (Sub‑Division: ${escapeHtml(subDivision)})`;
+  if(sectionOfficer) filterNote += ` (Officer: ${escapeHtml(sectionOfficer)})`;
+
   const printWindow = window.open('', '_blank');
   printWindow.document.write(`
+    <!DOCTYPE html>
     <html>
       <head>
         <title>Quick Report</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
+          @page {
+            margin-top: 60px;
+            margin-bottom: 40px;
+          }
+          body {
+            font-family: Arial, sans-serif;
+            padding: 0;
+            margin: 0;
+          }
+          .print-header-fixed {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            border-bottom: 2px solid #ccc;
+            padding: 8px 0;
+            background: white;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+          }
+          .print-header-fixed h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: bold;
+            color: #1a1a1a;
+          }
+          .print-header-fixed .subtitle {
+            font-size: 13px;
+            font-weight: 600;
+            color: #444;
+          }
+          .print-header-fixed .date {
+            font-size: 11px;
+            color: #666;
+            margin-top: 2px;
+          }
+          .print-footer-fixed {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            border-top: 1px solid #ddd;
+            padding: 6px 0;
+            font-size: 10px;
+            color: #999;
+            background: white;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+          }
+          .content-wrapper {
+            padding: 20px;
+          }
           table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
           th, td { border: 1px solid #ccc; padding: 8px; text-align: center; vertical-align: top; }
           th { background: #f0f0f0; }
@@ -3171,14 +2852,25 @@ function printQuickReport() {
           @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .hidden-detail { display: block !important; }
+            .action-plan-card { page-break-after: always; }
+            .report-header-screen { display: none; }
           }
         </style>
       </head>
-      <body>${content}</body>
+      <body>
+        <div class="print-header-fixed">
+          <h1>Jal Jeevan Mission (JJM 2.0)</h1>
+          <div class="subtitle">${division}${filterNote}</div>
+          <div class="date">Report Date: ${reportDate}</div>
+        </div>
+        <div class="print-footer-fixed">Generated by JJM 2.0 Monitoring System</div>
+        <div class="content-wrapper">
+          ${content}
+        </div>
+      </body>
     </html>
   `);
   printWindow.document.close();
   setTimeout(() => printWindow.print(), 500);
 }
-</script>
 </script>
