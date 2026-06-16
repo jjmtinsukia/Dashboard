@@ -2234,7 +2234,7 @@ ${schemesHTML}
 
 <!-- =============================================
  "What if Sumit Sir wants to know !!"  Feature
- (Section Officer filter, Action Plan first, print headers)
+ (COMPLETE – all reports, Section‑Officer‑wise deadline, print working)
  ============================================= -->
 <style>
 @keyframes popTitle {
@@ -2245,12 +2245,7 @@ ${schemesHTML}
   animation: popTitle 2s infinite;
   display: inline-block;
 }
-.clickable-count {
-  cursor: pointer;
-  text-decoration: underline;
-  color: #2563eb;
-  font-weight: bold;
-}
+.clickable-count { cursor: pointer; text-decoration: underline; color: #2563eb; font-weight: bold; }
 .clickable-count:hover { color: #1d4ed8; }
 .hidden-detail { display: none; }
 .action-plan-toggle { cursor: pointer; user-select: none; }
@@ -2296,11 +2291,10 @@ const officerSubDivisionMap = {
 // ==========================================
 const physicalProgressMap = {
   "30147295": 75, "30077542": 99
-  // add more "SCHEME_ID": progress_value pairs
 };
 
 // ==========================================
-// CREATE MODAL HTML (Action Plan first + Section Officer filter)
+// CREATE MODAL HTML
 // ==========================================
 (function createQuickReportModal() {
   const modalHTML = `
@@ -2327,6 +2321,7 @@ const physicalProgressMap = {
                 <option value="allReports">📋 ALL REPORTS (generate all at once)</option>
                 <option value="schemeActionPlan">Scheme‑Wise Action Plan</option>
                 <option value="schemesByDeadline">Schemes to be Completed by Deadline</option>
+                <option value="schemesByDeadlineOfficerWise">Schemes to be Completed by Deadline – Section Officer Wise</option>
                 <option value="tasksDueWeekByWeek">Tasks Due Week‑By‑Week per Section Officer</option>
                 <option value="monthWiseSchemes">Month‑Wise Target vs Achievement (Schemes)</option>
                 <option value="monthWiseTasks">Month‑Wise Target vs Achievement (Tasks)</option>
@@ -2377,7 +2372,7 @@ const physicalProgressMap = {
 })();
 
 // ==========================================
-// MODAL OPEN / CLOSE (populate filters)
+// MODAL OPEN / CLOSE
 // ==========================================
 function openQuickReportModal() {
   document.getElementById('quickReportModal').classList.remove('hidden');
@@ -2388,43 +2383,37 @@ function openQuickReportModal() {
   populateQuickReportSectionOfficers();
   document.getElementById('quickReportContent').innerHTML = '<p class="text-gray-500 text-center py-8">Please select a report from the dropdown above.</p>';
 }
-
 function closeQuickReportModal() {
   document.getElementById('quickReportModal').classList.add('hidden');
   document.body.style.overflow = '';
 }
-
 function populateQuickReportSectionOfficers() {
   const select = document.getElementById('quickReportSectionOfficer');
   const officers = [...new Set(state.schemes.map(s => s.section_officer).filter(Boolean))].sort();
   select.innerHTML = '<option value="">All Section Officers</option>';
   officers.forEach(name => {
     const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
+    opt.value = name; opt.textContent = name;
     select.appendChild(opt);
   });
 }
 
 // ==========================================
-// UTILITY: GET FILTERED DATA (both filters)
+// UTILITY: GET FILTERED DATA
 // ==========================================
 function getFilteredData() {
   const subDivision = document.getElementById('quickReportSubDivision').value;
   const sectionOfficer = document.getElementById('quickReportSectionOfficer').value;
   let filteredSchemes = [...state.schemes];
-
   if (subDivision) {
     filteredSchemes = filteredSchemes.filter(s => {
       const officer = s.section_officer;
       return officerSubDivisionMap[officer] === subDivision;
     });
   }
-
   if (sectionOfficer) {
     filteredSchemes = filteredSchemes.filter(s => s.section_officer === sectionOfficer);
   }
-
   const schemeIds = new Set(filteredSchemes.map(s => s.scheme_id));
   const filteredRaw = state.rawData.filter(r => schemeIds.has(r.scheme_id));
   return { schemes: filteredSchemes, rawData: filteredRaw };
@@ -2455,6 +2444,7 @@ function generateQuickReport() {
     switch(type) {
       case 'schemeActionPlan': html = generateSchemeActionPlan(); break;
       case 'schemesByDeadline': html = generateSchemesByDeadline(); break;
+      case 'schemesByDeadlineOfficerWise': html = generateSchemesByDeadlineOfficerWise(); break;
       case 'tasksDueWeekByWeek': html = generateTasksDueWeekByWeek(); break;
       case 'monthWiseSchemes': html = generateMonthWiseSchemes(); break;
       case 'monthWiseTasks': html = generateMonthWiseTasks(); break;
@@ -2481,6 +2471,8 @@ function generateAllReports() {
     <div style="page-break-after: always;">${generateSchemeActionPlan()}</div>
     <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
     <div style="page-break-after: always;">${generateSchemesByDeadline()}</div>
+    <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
+    <div style="page-break-after: always;">${generateSchemesByDeadlineOfficerWise()}</div>
     <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
     <div style="page-break-after: always;">${generateTasksDueWeekByWeek()}</div>
     <hr style="margin: 30px 0; border-top: 2px dashed #ccc;">
@@ -2543,10 +2535,8 @@ function extractPhysicalProgress(schemeId, schemeName) {
 }
 
 // ==========================================
-// ALL REPORT FUNCTIONS (fully defined below)
+// 1. SCHEME‑WISE ACTION PLAN
 // ==========================================
-
-// 1. Scheme‑Wise Action Plan
 function generateSchemeActionPlan() {
   const { schemes, rawData } = getFilteredData();
   const sortedSchemes = [...schemes].sort((a, b) => a.scheme_name.localeCompare(b.scheme_name));
@@ -2587,7 +2577,9 @@ function generateSchemeActionPlan() {
   return `<h3 class="text-lg font-bold mb-2 text-center">Scheme‑Wise Action Plan</h3><div>${html||'<p class="text-gray-500 text-center py-8">No schemes found.</p>'}</div>`;
 }
 
-// 2. Schemes by Deadline
+// ==========================================
+// 2. SCHEMES BY DEADLINE
+// ==========================================
 function generateSchemesByDeadline() {
   const { schemes } = getFilteredData();
   const deadline1 = new Date(2026,7,15), deadline2 = new Date(2026,8,16);
@@ -2608,7 +2600,69 @@ function generateSchemesByDeadline() {
   return `<h3 class="text-lg font-bold mb-2 text-center">Schemes to be Completed by Deadline</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr><th class="px-4 py-2 text-left border">Deadline Category</th><th class="px-4 py-2 text-center border">Number of Schemes</th></tr></thead><tbody>${renderCategory('By 15 August 2026 (on or before)',cat1,'cat1')}${renderCategory('16 August 2026 – 15 September 2026',cat2,'cat2')}${renderCategory('After 16 September 2026',cat3,'cat3')}</tbody></table></div>`;
 }
 
-// 3. Tasks Due Week‑By‑Week per Section Officer
+// ==========================================
+// 3. NEW: SCHEMES BY DEADLINE – SECTION OFFICER WISE
+// ==========================================
+function generateSchemesByDeadlineOfficerWise() {
+  const { schemes } = getFilteredData();
+  const deadline1 = new Date(2026, 7, 15);
+  const deadline2 = new Date(2026, 8, 16);
+
+  const enrichedSchemes = schemes.map(s => {
+    let status = '';
+    if (!s.latestDueDate) status = 'No due date';
+    else if (s.latestDueDate <= deadline1) status = 'By 15 August 2026 (on or before)';
+    else if (s.latestDueDate <= deadline2) status = '16 August 2026 – 15 September 2026';
+    else status = 'After 16 September 2026';
+    return { ...s, status };
+  });
+
+  enrichedSchemes.sort((a, b) => {
+    if (a.section_officer !== b.section_officer) {
+      return (a.section_officer || '').localeCompare(b.section_officer || '');
+    }
+    if (!a.latestDueDate && !b.latestDueDate) return 0;
+    if (!a.latestDueDate) return 1;
+    if (!b.latestDueDate) return -1;
+    return a.latestDueDate - b.latestDueDate;
+  });
+
+  let rows = '';
+  let serial = 1;
+  enrichedSchemes.forEach(s => {
+    rows += `<tr>
+      <td class="px-3 py-2 text-center border">${serial++}</td>
+      <td class="px-3 py-2 border">${escapeHtml(s.section_officer || 'N/A')}</td>
+      <td class="px-3 py-2 border">${escapeHtml(s.scheme_name)}</td>
+      <td class="px-3 py-2 border">${s.latestDueDate ? formatDate(s.latestDueDate) : 'No date'}</td>
+      <td class="px-3 py-2 border">${s.status}</td>
+    </tr>`;
+  });
+
+  return `
+    <h3 class="text-lg font-bold mb-2 text-center">Schemes to be Completed by Deadline – Section Officer Wise</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border border-gray-300">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="px-3 py-2 text-center align-top border">Sl. No.</th>
+            <th class="px-3 py-2 text-left align-top border">Section Officer Name</th>
+            <th class="px-3 py-2 text-left align-top border">Scheme Name</th>
+            <th class="px-3 py-2 text-center align-top border">Final Due Date</th>
+            <th class="px-3 py-2 text-left align-top border">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows || '<tr><td colspan="5" class="px-3 py-2 text-center border">No schemes found.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ==========================================
+// 4. TASKS DUE WEEK‑BY‑WEEK PER SECTION OFFICER
+// ==========================================
 function generateTasksDueWeekByWeek() {
   const { rawData } = getFilteredData();
   const today = state.reportDate||new Date();
@@ -2626,7 +2680,9 @@ function generateTasksDueWeekByWeek() {
   return `<h3 class="text-lg font-bold mb-2 text-center">Tasks Due Week‑By‑Week per Section Officer</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr>${headerRow}</tr></thead><tbody>${bodyRows}</tbody><tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot></table></div>`;
 }
 
-// 4. Month‑Wise Target vs Achievement (Schemes)
+// ==========================================
+// 5. MONTH‑WISE TARGET VS ACHIEVEMENT (SCHEMES)
+// ==========================================
 function generateMonthWiseSchemes() {
   const { schemes } = getFilteredData();
   const monthMap={};
@@ -2638,7 +2694,9 @@ function generateMonthWiseSchemes() {
   return `<h3 class="text-lg font-bold mb-2 text-center">Month‑Wise Target vs Achievement (Schemes)</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Month</th><th class="px-3 py-2 text-center align-top border">Schemes</th><th class="px-3 py-2 text-center align-top border">Target</th><th class="px-3 py-2 text-center align-top border">Actual</th></tr></thead><tbody>${rows}</tbody><tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot></table></div>`;
 }
 
-// 5. Month‑Wise Target vs Achievement (Tasks)
+// ==========================================
+// 6. MONTH‑WISE TARGET VS ACHIEVEMENT (TASKS)
+// ==========================================
 function generateMonthWiseTasks() {
   const { rawData } = getFilteredData();
   const map={};
@@ -2650,7 +2708,9 @@ function generateMonthWiseTasks() {
   return `<h3 class="text-lg font-bold mb-2 text-center">Month‑Wise Target vs Achievement (Tasks)</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Month</th><th class="px-3 py-2 text-center align-top border">Tasks</th><th class="px-3 py-2 text-center align-top border">Target</th><th class="px-3 py-2 text-center align-top border">Actual</th></tr></thead><tbody>${rows}</tbody><tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot></table></div>`;
 }
 
-// 6. Component‑Wise Progress
+// ==========================================
+// 7. COMPONENT‑WISE PROGRESS
+// ==========================================
 function generateComponentWise() {
   const { rawData } = getFilteredData();
   const map={};
@@ -2662,7 +2722,9 @@ function generateComponentWise() {
   return `<h3 class="text-lg font-bold mb-2 text-center">Component‑Wise Progress</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Component</th><th class="px-3 py-2 text-center align-top border">Tasks</th><th class="px-3 py-2 text-center align-top border">Avg %</th><th class="px-3 py-2 text-center align-top border">Critical</th><th class="px-3 py-2 text-center align-top border">Upcoming</th><th class="px-3 py-2 text-center align-top border">Scheduled</th></tr></thead><tbody>${rows}</tbody><tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot></table></div>`;
 }
 
-// 7. Tasks Due Week‑By‑Week per Scheme
+// ==========================================
+// 8. TASKS DUE WEEK‑BY‑WEEK PER SCHEME
+// ==========================================
 function generateTasksDueWeekByWeekScheme() {
   const { schemes, rawData } = getFilteredData();
   const today = state.reportDate||new Date();
@@ -2681,7 +2743,9 @@ function generateTasksDueWeekByWeekScheme() {
   return `<h3 class="text-lg font-bold mb-2 text-center">Tasks Due Week‑By‑Week per Scheme</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr>${headerRow}</tr></thead><tbody>${bodyRows}</tbody><tfoot class="bg-gray-50 font-bold"><tr>${totalsRow}</tr></tfoot></table></div>`;
 }
 
-// 8. Gantt Chart – Scheme
+// ==========================================
+// 9. GANTT CHART – SCHEME
+// ==========================================
 function generateGanttChartScheme() {
   const { schemes } = getFilteredData();
   const sortedSchemes = [...schemes].sort((a,b)=>{if(!a.latestDueDate&&!b.latestDueDate)return 0;if(!a.latestDueDate)return 1;if(!b.latestDueDate)return -1;return a.latestDueDate-b.latestDueDate;});
@@ -2692,7 +2756,9 @@ function generateGanttChartScheme() {
   return `<h3 class="text-lg font-bold mb-2 text-center">Gantt Chart – Scheme Due Month</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr>${headerRow}</tr></thead><tbody>${bodyRows}</tbody></table></div><p class="text-xs text-gray-500 mt-1">● Green circle = final due month. Sorted by earliest due date.</p>`;
 }
 
-// 9. Gantt Chart – Section Officer
+// ==========================================
+// 10. GANTT CHART – SECTION OFFICER
+// ==========================================
 function generateGanttChartOfficer() {
   const { schemes } = getFilteredData();
   const sortedSchemes = [...schemes].sort((a,b)=>{if(!a.latestDueDate&&!b.latestDueDate)return 0;if(!a.latestDueDate)return 1;if(!b.latestDueDate)return -1;return a.latestDueDate-b.latestDueDate;});
@@ -2705,7 +2771,9 @@ function generateGanttChartOfficer() {
   return `<h3 class="text-lg font-bold mb-2 text-center">Gantt Chart – Section Officer / Scheme Due Month</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr>${headerRow}</tr></thead><tbody>${bodyRows}</tbody></table></div><p class="text-xs text-gray-500 mt-1">● Green circle = final due month. Sorted by earliest due date.</p>`;
 }
 
-// 10. List of Overdue Tasks
+// ==========================================
+// 11. LIST OF OVERDUE TASKS
+// ==========================================
 function generateOverdueTasks() {
   const { rawData } = getFilteredData();
   const today = new Date();
@@ -2716,7 +2784,9 @@ function generateOverdueTasks() {
   return `<h3 class="text-lg font-bold mb-2 text-center">List of Overdue Tasks</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">SL No.</th><th class="px-3 py-2 text-left align-top border">Scheme Name</th><th class="px-3 py-2 text-left align-top border">Contractor Name</th><th class="px-3 py-2 text-left align-top border">Component</th><th class="px-3 py-2 text-left align-top border">Task</th><th class="px-3 py-2 text-center align-top border">Overdue by</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="px-3 py-2 text-center border">No overdue tasks found.</td></tr>'}</tbody></table></div>`;
 }
 
-// 11. Performance - Contractors
+// ==========================================
+// 12. PERFORMANCE - CONTRACTORS
+// ==========================================
 function generateBestWorstContractors() {
   const { schemes } = getFilteredData();
   const map={};
@@ -2728,7 +2798,9 @@ function generateBestWorstContractors() {
   return `<h3 class="text-lg font-bold mb-2 text-center">Performance - Contractors by Average Completion</h3><div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300"><thead class="bg-gray-100"><tr><th class="px-3 py-2 text-center align-top border">Rank</th><th class="px-3 py-2 text-center align-top border">Contractor</th><th class="px-3 py-2 text-center align-top border">Schemes</th><th class="px-3 py-2 text-center align-top border">Tasks</th><th class="px-3 py-2 text-center align-top border">Avg. Completion</th><th class="px-3 py-2 text-center align-top border">Critical</th><th class="px-3 py-2 text-center align-top border">Upcoming</th><th class="px-3 py-2 text-center align-top border">Scheduled</th></tr></thead><tbody>${tableRows}</tbody></table></div>`;
 }
 
-// 12. Performance - Section Officers
+// ==========================================
+// 13. PERFORMANCE - SECTION OFFICERS
+// ==========================================
 function generateBestWorstOfficers() {
   const { schemes } = getFilteredData();
   const map={};
@@ -2770,7 +2842,7 @@ function toggleDeadlineDetail(catId){
 function attachDeadlineToggleEvents(){document.querySelectorAll('.hidden-detail').forEach(el=>el.style.display='none');}
 
 // ==========================================
-// PRINT QUICK REPORT (header/footer on every page)
+// PRINT QUICK REPORT (working)
 // ==========================================
 function printQuickReport() {
   const content = document.getElementById('quickReportContent').innerHTML;
