@@ -2231,7 +2231,113 @@ ${schemesHTML}
 
 </body>
 </html>
+<!-- =============================================
+ Overdue Tasks Notification Ribbon (moving banner)
+ ============================================= -->
+<style>
+  #overdueRibbon {
+    background: #fff3cd;
+    border-bottom: 2px solid #ffc107;
+    color: #856404;
+    padding: 8px 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    overflow: hidden;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    display: none; /* hidden until overdue tasks exist */
+  }
+  #overdueRibbon .ribbon-content {
+    display: inline-block;
+    padding-left: 100%;
+    animation: scroll-left 25s linear infinite;
+  }
+  #overdueRibbon:hover .ribbon-content {
+    animation-play-state: paused;
+  }
+  @keyframes scroll-left {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+  }
+  #overdueRibbon .ribbon-item {
+    display: inline-block;
+    margin: 0 20px;
+  }
+  #overdueRibbon .ribbon-icon {
+    font-size: 1.1rem;
+  }
+</style>
 
+<div id="overdueRibbon" class="no-print" onclick="openQuickReportModal(); document.getElementById('quickReportSelect').value='overdueTasks'; generateQuickReport();">
+  <div class="ribbon-content" id="ribbonContent">
+    <!-- dynamically filled -->
+  </div>
+</div>
+
+<script>
+(function() {
+  // Function to update the ribbon content based on current state.rawData
+  function updateOverdueRibbon() {
+    const ribbon = document.getElementById('overdueRibbon');
+    const content = document.getElementById('ribbonContent');
+    if (!ribbon || !content) return;
+
+    const today = new Date();
+    const overdueTasks = state.rawData.filter(task => task.parsedDate && task.parsedDate < today && task.completion < 100);
+
+    if (overdueTasks.length === 0) {
+      ribbon.style.display = 'none';
+      return;
+    }
+
+    // Group by section officer
+    const officerCounts = {};
+    overdueTasks.forEach(task => {
+      const officer = task.section_officer || 'N/A';
+      officerCounts[officer] = (officerCounts[officer] || 0) + 1;
+    });
+
+    // Build ribbon text: "⚠ Overdue Tasks: Officer (X), Officer (Y) ..."
+    let html = '<span class="ribbon-icon">⚠️</span> <strong>Overdue Tasks:</strong> ';
+    const entries = Object.entries(officerCounts).sort((a,b) => b[1] - a[1]); // most overdue first
+    entries.forEach(([officer, count], index) => {
+      html += `<span class="ribbon-item">${escapeHtml(officer)} (${count})</span>`;
+      if (index < entries.length - 1) html += ' | ';
+    });
+    html += ' | <span style="text-decoration:underline;">Click for full list →</span>';
+
+    content.innerHTML = html;
+    ribbon.style.display = 'block';
+
+    // Adjust animation speed based on content length
+    const textWidth = content.scrollWidth;
+    const containerWidth = ribbon.clientWidth;
+    if (textWidth > containerWidth) {
+      const duration = Math.max(10, textWidth / 50); // slower for longer text
+      content.style.animationDuration = duration + 's';
+    } else {
+      content.style.animation = 'none'; // no scroll needed
+    }
+  }
+
+  // Update the ribbon after every data refresh
+  const originalProcessCSV = processCSV;
+  processCSV = function(data) {
+    originalProcessCSV(data);
+    updateOverdueRibbon();
+  };
+
+  // Also update periodically along with the main data refresh (every 2 min)
+  setInterval(updateOverdueRibbon, 120000);
+
+  // Initial update when dashboard first loads
+  window.addEventListener('load', function() {
+    setTimeout(updateOverdueRibbon, 1000); // wait for data
+  });
+})();
+</script>
 <!-- =============================================
  "What if Sumit Sir wants to know !!"  Feature
  (COMPLETE – all reports, Section‑Officer‑wise deadline, print working)
