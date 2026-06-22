@@ -1109,7 +1109,7 @@ function viewScheme(schemeId) {
         else if (days !== null && days <= 30) { statusText = 'UPCOMING'; statusClass = 'status-upcoming'; }
         else { statusText = 'SCHEDULED'; statusClass = 'status-scheduled'; }
         const daysText = days !== null ? `${days}d` : '-';
-        taskRowsHTML += `<tr class="${rowClass}"><td>${escapeHtml(task.component)}</td><td>${escapeHtml(task.task)}</td><td>${task.due_date || '-'}</td><td class="completion"><input type="number" class="completion-input" value="${task.completion}" min="0" max="100" data-raw-index="${rawIndex}"></td><td class="${statusClass}">${statusText}</td><td>${daysText}</td></tr>`;
+        taskRowsHTML += `<tr class="${rowClass}"><td>${escapeHtml(task.component)}</td><td>${escapeHtml(task.task)}</td><td>${task.due_date || '-'}</td><td class="completion"><input type="number" class="completion-input" value="${task.completion}" min="0" max="100" data-raw-index="${rawIndex}" disabled></td><td class="${statusClass}">${statusText}</td><td>${daysText}</td></tr>`;
     });
     document.getElementById('schemeDetailContent').innerHTML = `
         ${printHeaderHTML}
@@ -1133,7 +1133,6 @@ function viewScheme(schemeId) {
         ${execSummaryHTML}
         <h3 style="margin:5mm 0 2mm 0; font-size:14pt;" class="print-only">Task Progress Details</h3>
         <table class="task-table" style="width:100%;"><thead><tr><th>Component</th><th>Task Description</th><th>Due Date</th><th>Completion %</th><th>Status</th><th>Days Rem.</th></tr></thead><tbody>${taskRowsHTML}</tbody></table>
-        <div class="mt-5 text-right screen-only"><button onclick="saveProgressAndSync('${schemeId}')" class="px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-all shadow-sm"><i class="fas fa-save mr-1.5"></i> Save Progress</button></div>
         <div class="signature-section mt-8 pt-6 border-t-2 border-slate-300"><div class="signature-box"><div class="signature-line"></div><p style="font-weight:bold;">Contractor</p><p>M/s ${escapeHtml(scheme.contractor)}</p><p>Date: _______________</p></div><div class="signature-box"><div class="signature-line"></div><p style="font-weight:bold;">Section Officer</p><p>${escapeHtml(scheme.section_officer)}</p><p>Date: _______________</p></div></div>
     `;
     const ganttCanvas = document.getElementById('ganttChart');
