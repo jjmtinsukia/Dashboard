@@ -1076,6 +1076,9 @@ function processCSV(data) {
         for (let k in row) { let v = row[k] ? String(row[k]).trim() : ''; if (/^[=+\-@]/.test(v)) v = "'" + v; s[k.trim().toLowerCase()] = v; }
         let comp = parseInt(s.completion, 10);
         s.completion = isNaN(comp) ? 0 : Math.max(0, Math.min(100, comp));
+        // NEW: parse contractor progress
+        let contProgress = parseInt(s.progressbycontractor, 10);
+        s.progressbycontractor = isNaN(contProgress) ? 0 : Math.max(0, Math.min(100, contProgress));
         s.parsedDate = parseDate(s.due_date);
         if (s.report_date) { const rd = parseDate(s.report_date); if (rd) state.reportDate = rd; }
         state.originalCompletion[s.scheme_id + '|' + s.component + '|' + s.task] = s.completion;
@@ -1093,6 +1096,12 @@ function processCSV(data) {
     checkSCNTriggers();
     updateAbstractReport();
     showToast('Data Updated', `Loaded ${state.rawData.length} tasks across ${state.schemes.length} schemes.`, 'success');
+    aggregateSchemes();
+    // Detect mismatches (ignore if both are 0)
+    state.mismatches = state.rawData.filter(r => 
+    r.completion !== r.progressbycontractor && (r.completion > 0 || r.progressbycontractor > 0)
+);
+updateMismatchPanel();
 }
 
 function parseDate(str) {
@@ -2524,8 +2533,54 @@ function closeKpiModal() {
   document.getElementById('kpiModal').classList.add('hidden');
   document.body.style.overflow = '';
 }
+function updateMismatchPanel() {
+    const panel = document.getElementById('mismatchPanel');
+    const list = document.getElementById('mismatchList');
+    const count = document.getElementById('mismatchCount');
+    if (!state.mismatches.length) {
+        panel.style.display = 'none';
+        return;
+    }
+    count.textContent = state.mismatches.length;
+    list.innerHTML = state.mismatches.map(r => {
+        const scheme = state.schemes.find(s => s.scheme_id === r.scheme_id);
+        return `<li class="py-2">
+            <strong>${escapeHtml(scheme ? scheme.scheme_name : r.scheme_id)}</strong><br>
+            ${escapeHtml(r.component)} – ${escapeHtml(r.task)}<br>
+            <span class="text-indigo-600 font-bold">Dept: ${r.completion}%</span> &nbsp;
+            <span class="text-amber-600 font-bold">Contractor: ${r.progressbycontractor}%</span>
+        </li>`;
+    }).join('');
+    panel.style.display = 'block';
+    // Start expanded
+    document.getElementById('mismatchContent').style.display = 'block';
+    document.getElementById('mismatchToggleIcon').className = 'fas fa-chevron-up text-rose-600 text-sm';
+}
 
+function toggleMismatchPanel() {
+    const content = document.getElementById('mismatchContent');
+    const icon = document.getElementById('mismatchToggleIcon');
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.className = 'fas fa-chevron-up text-rose-600 text-sm';
+    } else {
+        content.style.display = 'none';
+        icon.className = 'fas fa-chevron-down text-rose-600 text-sm';
+    }
+}
 </script>
-
+<!-- Mismatch Panel (Chatbox) -->
+<div id="mismatchPanel" class="fixed bottom-4 left-4 z-50 no-print bg-white rounded-xl shadow-xl border border-rose-200 w-80 max-h-96 overflow-hidden transition-all" style="display:none;">
+    <div class="bg-rose-50 px-4 py-3 flex justify-between items-center cursor-pointer" onclick="toggleMismatchPanel()">
+        <div class="flex items-center gap-2">
+            <i class="fas fa-exclamation-triangle text-rose-600"></i>
+            <span class="font-bold text-rose-800 text-sm">Mismatches (<span id="mismatchCount">0</span>)</span>
+        </div>
+        <i id="mismatchToggleIcon" class="fas fa-chevron-up text-rose-600 text-sm"></i>
+    </div>
+    <div id="mismatchContent" class="overflow-y-auto max-h-64">
+        <ul id="mismatchList" class="divide-y divide-slate-100 text-xs p-2"></ul>
+    </div>
+</div>
 </body>
 </html>
