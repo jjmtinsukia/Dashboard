@@ -185,18 +185,26 @@
             padding: 0 !important; border-radius: 0 !important;
         }
         body.printing-scn #scnModal > div {
-            box-shadow: none !important; border: none !important; max-width: 100% !important;
-            margin: 0 !important; border-radius: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
         }
         body.printing-scn .scn-preview-wrapper {
             background: white !important; padding: 0 !important; max-height: none !important;
             overflow: visible !important;
         }
         body.printing-scn #scnPreview {
-            box-shadow: none !important; margin: 0 auto !important;
-            width: auto !important; min-height: auto !important;
+            box-shadow: none !important;
+            margin: 0 auto !important;
+            width: auto !important;
+            min-height: auto !important;
             font-family: 'Times New Roman', Times, serif !important;
-            font-size: 12pt !important; color: black !important;
+            font-size: 12pt !important;
+            color: black !important;
+            padding: 0 !important;
         }
         body.printing-scn #schemeDetailModal, body.printing-scn #reportModal, body.printing-scn #wrnModal { display: none !important; }
 
@@ -398,27 +406,27 @@
     </section>
 
     <section id="statsSection" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5 no-print" style="display:none;">
-        <div class="stat-card bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+        <div class="stat-card bg-white p-5 rounded-2xl shadow-sm border border-slate-100" cursor-pointer" onclick="showKpiDetail('totalSchemes')">
             <div class="flex items-center gap-2 mb-2"><div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center"><i class="fas fa-layer-group text-indigo-600 text-xs"></i></div><p class="text-slate-500 text-xs uppercase font-bold tracking-wider">Total Schemes</p></div>
             <p class="text-3xl font-extrabold text-slate-900 mt-1" id="statSchemes">0</p>
             <p class="text-xs text-slate-400 mt-1" id="statTasks">0 tasks across all</p>
         </div>
-        <div class="stat-card bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-t-2 border-t-emerald-500">
+        <div class="stat-card bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-t-2 border-t-emerald-500" cursor-pointer" onclick="showKpiDetail('fullyCompleted')">
             <div class="flex items-center gap-2 mb-2"><div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center"><i class="fas fa-check-circle text-emerald-600 text-xs"></i></div><p class="text-emerald-700 text-xs uppercase font-bold tracking-wider">Fully Completed</p></div>
             <p class="text-3xl font-extrabold text-emerald-700 mt-1" id="statCompletedSchemes">0</p>
             <p class="text-xs text-emerald-500 mt-1">All tasks at 100%</p>
         </div>
-        <div class="stat-card bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-t-2 border-t-rose-500">
+        <div class="stat-card bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-t-2 border-t-rose-500" cursor-pointer" onclick="showKpiDetail('critical')">
             <div class="flex items-center gap-2 mb-2"><div class="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center"><i class="fas fa-clock text-rose-600 text-xs"></i></div><p class="text-rose-600 text-xs uppercase font-bold tracking-wider">Critical</p></div>
             <p class="text-3xl font-extrabold text-rose-600 mt-1" id="statCritical">0</p>
             <p class="text-xs text-rose-400 mt-1">Tasks due within 7 days</p>
         </div>
-        <div class="stat-card bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-t-2 border-t-amber-500">
+        <div class="stat-card bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-t-2 border-t-amber-500" cursor-pointer" onclick="showKpiDetail('upcoming')">
             <div class="flex items-center gap-2 mb-2"><div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center"><i class="fas fa-hourglass-half text-amber-600 text-xs"></i></div><p class="text-amber-600 text-xs uppercase font-bold tracking-wider">Upcoming</p></div>
             <p class="text-3xl font-extrabold text-amber-600 mt-1" id="statUpcoming">0</p>
             <p class="text-xs text-amber-400 mt-1">Tasks due in 8–30 days</p>
         </div>
-        <div class="stat-card bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-t-2 border-t-sky-500">
+        <div class="stat-card bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-t-2 border-t-sky-500"cursor-pointer" onclick="showKpiDetail('scheduled')">
             <div class="flex items-center gap-2 mb-2"><div class="w-8 h-8 bg-sky-100 rounded-lg flex items-center justify-center"><i class="fas fa-calendar-alt text-sky-600 text-xs"></i></div><p class="text-sky-600 text-xs uppercase font-bold tracking-wider">Scheduled</p></div>
             <p class="text-3xl font-extrabold text-sky-600 mt-1" id="statScheduled">0</p>
             <p class="text-xs text-sky-400 mt-1">Tasks due beyond 30 days</p>
@@ -426,16 +434,27 @@
     </section>
 
     <section id="abstractReportSection" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 no-print" style="display:none;">
-        <h2 class="text-lg font-extrabold text-slate-900 mb-4">Abstract Report – Due‑date‑wise Completion</h2>
+        <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-extrabold text-slate-900">Abstract Report – Due‑date‑wise Completion</h2>
+    <div class="flex gap-2">
+        <button id="btnAbstractExpand" class="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 font-semibold transition-all">
+            <i class="fas fa-expand mr-1.5"></i> Expand
+        </button>
+        <button id="btnAbstractPrint" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold transition-all shadow-sm">
+            <i class="fas fa-print mr-1.5"></i> Print
+        </button>
+    </div>
+</div>
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
                 <thead class="bg-slate-50">
-                    <tr>
-                        <th class="px-5 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Month</th>
-                        <th class="px-5 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Tasks Due</th>
-                        <th class="px-5 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Avg. Completion %</th>
-                    </tr>
-                </thead>
+    <tr>
+        <th class="px-5 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Month</th>
+        <th class="px-5 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Tasks Due</th>
+        <th class="px-5 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Completed Tasks</th>
+        <th class="px-5 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Avg. Completion %</th>
+    </tr>
+</thead>
                 <tbody id="abstractReportBody" class="divide-y divide-slate-100"></tbody>
             </table>
         </div>
@@ -581,6 +600,12 @@
                     <button onclick="printSCN()" class="px-4 py-2 text-sm bg-rose-600 text-white rounded-lg hover:bg-rose-700 font-semibold shadow-sm transition-all">
                         <i class="fas fa-print mr-1"></i> Print / PDF
                     </button>
+                    <button onclick="sendSCNByEmail()" class="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold shadow-sm transition-all">
+    <i class="fas fa-envelope mr-1"></i> Send Email
+</button>
+<button onclick="copySCNHTML()" class="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 font-semibold transition-all">
+    <i class="fas fa-copy mr-1"></i> Copy HTML
+</button>
                 </div>
             </div>
             <div class="p-5 bg-indigo-50 border-b border-indigo-100 no-print">
@@ -594,6 +619,14 @@
                     <div><label class="block text-[10px] font-bold text-indigo-800 mb-1.5 uppercase tracking-wider">Contract Agreement No.</label><input type="text" id="editContractNo" placeholder="e.g., CA/2025-26/045" class="w-full px-4 py-2.5 text-sm border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white transition-shadow" oninput="updateSCNPreview()"></div>
                     <div><label class="block text-[10px] font-bold text-indigo-800 mb-1.5 uppercase tracking-wider">Work Order Date</label><input type="text" id="editWorkOrderDate" placeholder="e.g., 15 Mar 2026" class="w-full px-4 py-2.5 text-sm border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white transition-shadow" oninput="updateSCNPreview()"></div>
                     <div><label class="block text-[10px] font-bold text-indigo-800 mb-1.5 uppercase tracking-wider">Scheduled Completion Date</label><input type="text" id="editSchedCompDate" placeholder="e.g., 30 Sep 2026" class="w-full px-4 py-2.5 text-sm border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white transition-shadow" oninput="updateSCNPreview()"></div>
+                    <div>
+    <label class="block text-[10px] font-bold text-indigo-800 mb-1.5 uppercase tracking-wider">Contractor Email</label>
+    <input type="email" id="editContractorEmail" placeholder="e.g., contractor@example.com" class="w-full px-4 py-2.5 text-sm border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white transition-shadow" oninput="updateSCNPreview()">
+</div>
+<div>
+    <label class="block text-[10px] font-bold text-indigo-800 mb-1.5 uppercase tracking-wider">Section Officer Email</label>
+    <input type="email" id="editOfficerEmail" placeholder="e.g., officer@example.com" class="w-full px-4 py-2.5 text-sm border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white transition-shadow" oninput="updateSCNPreview()">
+</div>
                     <div class="md:col-span-3"><label class="block text-[10px] font-bold text-indigo-800 mb-1.5 uppercase tracking-wider">Contractor Address</label><textarea id="editContractorAddress" rows="2" placeholder="Address line 1&#10;City, State - PIN" class="w-full px-4 py-2.5 text-sm border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white resize-none transition-shadow" oninput="updateSCNPreview()"></textarea></div>
                 </div>
             </div>
@@ -811,6 +844,19 @@
         </div>
     </div>
 </div>
+<!-- KPI Detail Modal -->
+<<div id="kpiModal" class="fixed inset-0 z-50 hidden modal-backdrop overflow-y-auto" onclick="if(event.target===this) closeKpiModal()">
+  <div class="min-h-screen flex items-start justify-center p-4 py-8">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl relative my-4 border border-slate-100">
+      <div class="flex justify-between items-center p-5 border-b border-slate-200 sticky top-0 bg-white z-10 rounded-t-2xl">
+        <h2 class="text-lg font-extrabold text-slate-800 uppercase" id="kpiModalTitle">Detail View</h2>
+        <button onclick="closeKpiModal()" class="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 font-semibold transition-all">Close</button>
+      </div>
+      <div class="p-5 overflow-x-auto" id="kpiModalContent" style="max-height: calc(100vh - 200px); overflow-y: auto;">
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Toast -->
 <div id="toast" class="fixed bottom-5 right-5 z-[60] hidden transform transition-all duration-300 translate-y-10 opacity-0">
@@ -833,7 +879,10 @@ const state = {
     currentSCNScheme: null,
     currentDetailScheme: null,
     currentDetailSchemeId: null,
-    scnDetails: { divisionName: '', contractorName: '', contractorAddress: '', contractAgreementNo: '', workOrderDate: '', scheduledCompletionDate: '' },
+    scnDetails: {
+    divisionName: '', contractorName: '', contractorAddress: '', contractAgreementNo: '',
+    workOrderDate: '', scheduledCompletionDate: '', contractorEmail: '', officerEmail: ''
+},
     charts: { gantt: null, donut: null },
     currentPage: 1,
     pageSize: 5,
@@ -843,6 +892,8 @@ const state = {
     contractorMap: {},
     currentWRNScheme: null
 };
+let abstractExpanded = false;
+let kpiSortState = { column: -1, direction: 'asc' };
 
 const VALID_USER = "JJMTSK2026";
 const VALID_PASS = "JJM@2627";
@@ -886,7 +937,87 @@ function initDashboard() {
     updatePrintMargins('report');
     document.getElementById('btnRoadmapDownload').addEventListener('click', openRoadmapModal);
 }
+document.getElementById('btnAbstractExpand').addEventListener('click', function() {
+    abstractExpanded = !abstractExpanded;
+    this.innerHTML = abstractExpanded ? '<i class="fas fa-compress mr-1.5"></i> Collapse' : '<i class="fas fa-expand mr-1.5"></i> Expand';
+    updateAbstractReport(abstractExpanded);
+});
 
+document.getElementById('btnAbstractPrint').addEventListener('click', function() {
+    if (state.rawData.length === 0) return;
+    const data = getAbstractReportData();
+    const division = escapeHtml(state.scnDetails.divisionName || 'Tinsukia Division');
+    const reportDate = formatDate(state.reportDate);
+
+    let rowsHTML = '';
+    data.forEach(m => {
+        rowsHTML += `<tr>
+            <td style="padding:8px 12px; font-weight:bold;">${m.month}</td>
+            <td style="padding:8px 12px; text-align:right;">${m.count}</td>
+            <td style="padding:8px 12px; text-align:right;">${m.completedCount}</td>
+            <td style="padding:8px 12px; text-align:right; font-weight:bold;">${m.avg}%</td>
+        </tr>`;
+        rowsHTML += `<tr><td colspan="4" style="padding:0;">
+            <div style="background:#f9fafb; padding:12px;">
+                <table style="width:100%; border-collapse:collapse; font-size:10pt;">
+                    <thead style="background:#f1f5f9;">
+                        <tr>
+                            <th style="padding:6px 8px; text-align:left;">Scheme ID</th>
+                            <th style="padding:6px 8px; text-align:left;">Scheme Name</th>
+                            <th style="padding:6px 8px; text-align:left;">Contractor</th>
+                            <th style="padding:6px 8px; text-align:left;">Section Officer</th>
+                            <th style="padding:6px 8px; text-align:center;">Tasks Due</th>
+                            <th style="padding:6px 8px; text-align:center;">Completed</th>
+                            <th style="padding:6px 8px; text-align:center;">Avg. Completion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${m.schemes.map(s => `
+                            <tr>
+                                <td style="padding:6px 8px;">${escapeHtml(s.scheme_id)}</td>
+                                <td style="padding:6px 8px;">${escapeHtml(s.scheme_name)}</td>
+                                <td style="padding:6px 8px;">${escapeHtml(s.contractor)}</td>
+                                <td style="padding:6px 8px;">${escapeHtml(s.section_officer)}</td>
+                                <td style="padding:6px 8px; text-align:center;">${s.count}</td>
+                                <td style="padding:6px 8px; text-align:center;">${s.completed}</td>
+                                <td style="padding:6px 8px; text-align:center; font-weight:bold;">${s.avg}%</td>
+                            </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </td></tr>`;
+    });
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Abstract Report</title>
+        <style>
+            body { font-family: 'Times New Roman', Times, serif; margin: 20mm; }
+            .header { text-align: center; margin-bottom: 10mm; border-bottom: 2px solid #000; padding-bottom: 5mm; }
+            .header h1 { font-size: 18pt; margin:0; }
+            .header p { margin: 2mm 0 0 0; }
+            table.main { width: 100%; border-collapse: collapse; margin-bottom: 5mm; }
+            table.main th, table.main td { border: 1px solid #999; padding: 8px; }
+            table.main th { background: #f0f0f0; }
+            @media print { body { margin: 0; } }
+        </style></head><body>
+        <div class="header">
+            <h1>Jal Jeevan Mission (JJM 2.0)</h1>
+            <p><strong>${division}</strong></p>
+            <p>Abstract Report – Due‑date‑wise Completion</p>
+            <p>Report Date: ${reportDate}</p>
+        </div>
+        <table class="main">
+            <thead><tr>
+                <th>Month</th><th>Tasks Due</th><th>Completed Tasks</th><th>Avg. Completion %</th>
+            </tr></thead>
+            <tbody>${rowsHTML}</tbody>
+        </table>
+        <p style="text-align:center; font-size:10pt; color:#666;">Generated by JJM 2.0 Monitoring System</p>
+        </body></html>`;
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 500);
+});
 async function loadGoogleSheet() {
     try {
         const response = await fetch(SHEET_URL + "&t=" + Date.now());
@@ -1018,28 +1149,84 @@ function checkSCNTriggers() {
     document.getElementById('scnAlertList').innerHTML = totalSCN > 0 ? `<li>${totalCriticalTasks} critical task${totalCriticalTasks!==1?'s':''} across ${totalSCN} scheme${totalSCN!==1?'s':''}</li>` : '';
 }
 
-function updateAbstractReport() {
-    const body = document.getElementById('abstractReportBody');
-    body.innerHTML = '';
-    if (state.rawData.length === 0) return;
+function getAbstractReportData() {
     const monthly = {};
     state.rawData.forEach(row => {
         if (!row.parsedDate) return;
         const key = `${row.parsedDate.getFullYear()}-${String(row.parsedDate.getMonth()+1).padStart(2,'0')}`;
-        if (!monthly[key]) monthly[key] = { count: 0, totalCompletion: 0 };
+        if (!monthly[key]) monthly[key] = { count: 0, totalCompletion: 0, completedCount: 0, schemes: {} };
         monthly[key].count++;
         monthly[key].totalCompletion += row.completion;
+        if (row.completion >= 100) monthly[key].completedCount++;
+        const sid = row.scheme_id;
+        if (!monthly[key].schemes[sid]) {
+            monthly[key].schemes[sid] = { scheme_id: sid, scheme_name: row.scheme_name, contractor: row.contractor, section_officer: row.section_officer, count: 0, completed: 0, totalCompletion: 0 };
+        }
+        monthly[key].schemes[sid].count++;
+        monthly[key].schemes[sid].totalCompletion += row.completion;
+        if (row.completion >= 100) monthly[key].schemes[sid].completed++;
     });
-    const sortedMonths = Object.keys(monthly).sort();
-    sortedMonths.forEach(month => {
-        const { count, totalCompletion } = monthly[month];
-        const avg = Math.round(totalCompletion / count);
-        const tr = document.createElement('tr');
-        tr.className = 'table-row-stripe table-row-hover';
-        tr.innerHTML = `<td class="px-5 py-3 font-semibold text-slate-800">${month}</td><td class="px-5 py-3 text-right font-bold text-slate-700">${count}</td><td class="px-5 py-3 text-right font-bold text-slate-700">${avg}%</td>`;
-        body.appendChild(tr);
+    return Object.keys(monthly).sort().map(month => {
+        const { count, totalCompletion, completedCount, schemes } = monthly[month];
+        return {
+            month,
+            count,
+            completedCount,
+            avg: Math.round(totalCompletion / count),
+            schemes: Object.values(schemes).map(s => ({ ...s, avg: Math.round(s.totalCompletion / s.count) }))
+        };
     });
 }
+
+function buildAbstractReportRows(expanded) {
+    const data = getAbstractReportData();
+    let html = '';
+    data.forEach(m => {
+        html += `<tr class="table-row-stripe table-row-hover">
+            <td class="px-5 py-3 font-semibold text-slate-800">${m.month}</td>
+            <td class="px-5 py-3 text-right font-bold text-slate-700">${m.count}</td>
+            <td class="px-5 py-3 text-right font-bold text-slate-700">${m.completedCount}</td>
+            <td class="px-5 py-3 text-right font-bold text-slate-700">${m.avg}%</td>
+        </tr>`;
+        if (expanded) {
+            html += `<tr><td colspan="4" class="p-0 border-b border-slate-200">
+                <div class="bg-slate-50 p-4">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-white">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-xs font-bold text-slate-500 uppercase">Scheme ID</th>
+                                <th class="px-3 py-2 text-left text-xs font-bold text-slate-500 uppercase">Scheme Name</th>
+                                <th class="px-3 py-2 text-left text-xs font-bold text-slate-500 uppercase">Contractor</th>
+                                <th class="px-3 py-2 text-left text-xs font-bold text-slate-500 uppercase">Section Officer</th>
+                                <th class="px-3 py-2 text-center text-xs font-bold text-slate-500 uppercase">Tasks Due</th>
+                                <th class="px-3 py-2 text-center text-xs font-bold text-slate-500 uppercase">Completed</th>
+                                <th class="px-3 py-2 text-center text-xs font-bold text-slate-500 uppercase">Avg. Completion</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200">
+                            ${m.schemes.map(s => `
+                                <tr>
+                                    <td class="px-3 py-2">${escapeHtml(s.scheme_id)}</td>
+                                    <td class="px-3 py-2">${escapeHtml(s.scheme_name)}</td>
+                                    <td class="px-3 py-2">${escapeHtml(s.contractor)}</td>
+                                    <td class="px-3 py-2">${escapeHtml(s.section_officer)}</td>
+                                    <td class="px-3 py-2 text-center">${s.count}</td>
+                                    <td class="px-3 py-2 text-center">${s.completed}</td>
+                                    <td class="px-3 py-2 text-center font-bold">${s.avg}%</td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </td></tr>`;
+        }
+    });
+    return html;
+}
+
+function updateAbstractReport(expanded = false) {
+    document.getElementById('abstractReportBody').innerHTML = buildAbstractReportRows(expanded);
+}
+
 
 function viewScheme(schemeId) {
     const scheme = state.schemes.find(s => s.scheme_id === schemeId);
@@ -1241,7 +1428,20 @@ function populateEditFields() {
     document.getElementById('editContractNo').value = state.scnDetails.contractAgreementNo;
     document.getElementById('editWorkOrderDate').value = state.scnDetails.workOrderDate;
     document.getElementById('editSchedCompDate').value = state.scnDetails.scheduledCompletionDate;
+    document.getElementById('editContractorEmail').value = state.scnDetails.contractorEmail;
+    document.getElementById('editOfficerEmail').value = state.scnDetails.officerEmail;
+    
 }
+// Auto‑detect contractor email from contractor map
+const cd = state.contractorMap[state.currentSCNScheme?.contractor];
+let contractorEmail = state.scnDetails.contractorEmail || '';
+if (!contractorEmail && cd && cd.contact && cd.contact.includes('@')) {
+    contractorEmail = cd.contact.trim();
+}
+document.getElementById('editContractorEmail').value = contractorEmail;
+document.getElementById('editOfficerEmail').value = state.scnDetails.officerEmail || '';
+
+
 function updateSCNPreview() {
     state.scnDetails.divisionName = document.getElementById('editDivision').value.trim();
     state.scnDetails.contractorName = document.getElementById('editContractorName').value.trim();
@@ -1249,6 +1449,8 @@ function updateSCNPreview() {
     state.scnDetails.contractAgreementNo = document.getElementById('editContractNo').value.trim();
     state.scnDetails.workOrderDate = document.getElementById('editWorkOrderDate').value.trim();
     state.scnDetails.scheduledCompletionDate = document.getElementById('editSchedCompDate').value.trim();
+    state.scnDetails.contractorEmail = document.getElementById('editContractorEmail').value.trim();
+    state.scnDetails.officerEmail = document.getElementById('editOfficerEmail').value.trim();
     if (state.currentSCNScheme) renderSCN(state.currentSCNScheme);
 }
 function renderSCN(scheme) { document.getElementById('scnPreview').innerHTML = generateSCNContent(scheme); }
@@ -1303,10 +1505,187 @@ function updateWRNPreview() {
     }
 }
 
-function printSCN() { document.body.classList.add('printing-scn'); document.getElementById('scnModal').offsetHeight; window.print(); window.onafterprint = () => document.body.classList.remove('printing-scn'); }
+function printSCN() {
+  if (!state.currentSCNScheme) return;
+  
+  // Make sure the preview is up‑to‑date with the latest edits
+  updateSCNPreview();
+  
+  // Get the final SCN content
+  const content = document.getElementById('scnPreview').innerHTML;
+  const division = escapeHtml(state.scnDetails.divisionName || 'Tinsukia Division');
+  const reportDate = formatDate(state.reportDate);
+
+  // Build a clean HTML page
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Show Cause Notice – ${escapeHtml(state.currentSCNScheme.scheme_id)}</title>
+  <style>
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      margin: 20mm;
+      color: #000;
+      background: #fff;
+    }
+    @media print {
+      body { margin: 0; }
+    }
+  </style>
+</head>
+<body>
+  ${content}
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  
+  // Trigger print after a short delay (to allow rendering)
+  setTimeout(() => w.print(), 500);
+}
+
+function sendSCNByEmail() {
+    if (!state.currentSCNScheme) return;
+    updateSCNPreview();  // ensure latest content
+
+    const toContractor = document.getElementById('editContractorEmail').value.trim();
+    const toOfficer = document.getElementById('editOfficerEmail').value.trim();
+
+    if (!toContractor && !toOfficer) {
+        showToast('No Emails', 'Please enter at least one email address.', 'error');
+        return;
+    }
+
+    const subject = `Show Cause Notice – ${state.currentSCNScheme.scheme_id} – ${escapeHtml(state.currentSCNScheme.scheme_name)}`;
+    const htmlContent = document.getElementById('scnPreview').innerHTML;
+
+    // Try to send via Apps Script backend
+    const payload = {
+        action: 'sendSCNEmail',
+        toContractor,
+        toOfficer,
+        subject,
+        htmlContent,
+        schemeId: state.currentSCNScheme.scheme_id
+    };
+
+    showToast('Sending…', 'Attempting to send email via server.', 'info');
+
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Server error');
+        return response.json();
+    })
+    .then(result => {
+        if (result.success) {
+            showToast('Email Sent', `SCN sent to ${toContractor} and ${toOfficer}.`, 'success');
+        } else {
+            throw new Error(result.error || 'Unknown error');
+        }
+    })
+    .catch(err => {
+        console.warn('Email API failed, falling back to mailto:', err);
+        // Fallback: open mailto with plain text summary
+        let bodyText = `Please find the Show Cause Notice for scheme ${state.currentSCNScheme.scheme_id} attached.\n\n`;
+        bodyText += `Scheme: ${state.currentSCNScheme.scheme_name}\n`;
+        bodyText += `Contractor: ${state.currentSCNScheme.contractor}\n`;
+        bodyText += `Critical Tasks: ${state.currentSCNScheme.scnTasks.length}\n\n`;
+        bodyText += `--- SCN Preview (HTML version should be pasted from clipboard) ---\n`;
+
+        const mailto = `mailto:${toContractor},${toOfficer}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+        window.open(mailto, '_blank');
+        showToast('Fallback', 'Could not send email directly. A mailto link has been opened. You can also copy the HTML and paste it.', 'warning');
+    });
+}
+
+function copySCNHTML() {
+    updateSCNPreview();
+    const content = document.getElementById('scnPreview').innerHTML;
+    const htmlBlob = new Blob([content], { type: 'text/html' });
+    const clipboardItem = new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': new Blob([content.replace(/<[^>]*>/g, '')], { type: 'text/plain' }) });
+    navigator.clipboard.write([clipboardItem])
+        .then(() => showToast('Copied', 'SCN HTML copied to clipboard. You can paste it into your email client.', 'success'))
+        .catch(() => showToast('Copy Failed', 'Could not copy. Try selecting and copying manually.', 'error'));
+}
+
 function printSchemeDetail() { document.body.classList.add('printing-scheme'); document.getElementById('schemeDetailModal').offsetHeight; window.print(); window.onafterprint = () => document.body.classList.remove('printing-scheme'); }
 function printWRN() { document.body.classList.add('printing-wrn'); document.getElementById('wrnModal').offsetHeight; window.print(); window.onafterprint = () => document.body.classList.remove('printing-wrn'); }
 function printReport() { document.body.classList.add('printing-report'); document.getElementById('reportModal').offsetHeight; window.print(); window.onafterprint = () => document.body.classList.remove('printing-report'); }
+function sendSCNByEmail() {
+    if (!state.currentSCNScheme) return;
+    updateSCNPreview();  // ensure latest content
+
+    const toContractor = document.getElementById('editContractorEmail').value.trim();
+    const toOfficer = document.getElementById('editOfficerEmail').value.trim();
+
+    if (!toContractor && !toOfficer) {
+        showToast('No Emails', 'Please enter at least one email address.', 'error');
+        return;
+    }
+
+    const subject = `Show Cause Notice – ${state.currentSCNScheme.scheme_id} – ${escapeHtml(state.currentSCNScheme.scheme_name)}`;
+    const htmlContent = document.getElementById('scnPreview').innerHTML;
+
+    // Try to send via Apps Script backend
+    const payload = {
+        action: 'sendSCNEmail',
+        toContractor,
+        toOfficer,
+        subject,
+        htmlContent,
+        schemeId: state.currentSCNScheme.scheme_id
+    };
+
+    showToast('Sending…', 'Attempting to send email via server.', 'info');
+
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Server error');
+        return response.json();
+    })
+    .then(result => {
+        if (result.success) {
+            showToast('Email Sent', `SCN sent to ${toContractor} and ${toOfficer}.`, 'success');
+        } else {
+            throw new Error(result.error || 'Unknown error');
+        }
+    })
+    .catch(err => {
+        console.warn('Email API failed, falling back to mailto:', err);
+        // Fallback: open mailto with plain text summary
+        let bodyText = `Please find the Show Cause Notice for scheme ${state.currentSCNScheme.scheme_id} attached.\n\n`;
+        bodyText += `Scheme: ${state.currentSCNScheme.scheme_name}\n`;
+        bodyText += `Contractor: ${state.currentSCNScheme.contractor}\n`;
+        bodyText += `Critical Tasks: ${state.currentSCNScheme.scnTasks.length}\n\n`;
+        bodyText += `--- SCN Preview (HTML version should be pasted from clipboard) ---\n`;
+
+        const mailto = `mailto:${toContractor},${toOfficer}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+        window.open(mailto, '_blank');
+        showToast('Fallback', 'Could not send email directly. A mailto link has been opened. You can also copy the HTML and paste it.', 'warning');
+    });
+}
+
+function copySCNHTML() {
+    updateSCNPreview();
+    const content = document.getElementById('scnPreview').innerHTML;
+    const htmlBlob = new Blob([content], { type: 'text/html' });
+    const clipboardItem = new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': new Blob([content.replace(/<[^>]*>/g, '')], { type: 'text/plain' }) });
+    navigator.clipboard.write([clipboardItem])
+        .then(() => showToast('Copied', 'SCN HTML copied to clipboard. You can paste it into your email client.', 'success'))
+        .catch(() => showToast('Copy Failed', 'Could not copy. Try selecting and copying manually.', 'error'));
+}
+
 
 function updatePrintMargins(type) {
     const paperSize = type === 'scn' ? document.getElementById('scnPaperSize')?.value || 'A4' : type === 'wrn' ? document.getElementById('wrnPaperSize')?.value || 'A4' : document.getElementById('reportPaperSize')?.value || 'A4';
@@ -1946,6 +2325,203 @@ function printQuickReport() {
         inject();
     }
 })();
+function showKpiDetail(type) {
+  const modal = document.getElementById('kpiModal');
+  const title = document.getElementById('kpiModalTitle');
+  const content = document.getElementById('kpiModalContent');
+
+  let columns = [];
+  let rows = [];
+
+  const schemes = state.schemes;
+  const raw = state.rawData;
+
+  switch (type) {
+    case 'totalSchemes':
+      title.textContent = 'All Schemes';
+      columns = ['Scheme ID', 'Scheme Name', 'Section Officer', 'Contractor', 'Tasks', 'Avg. Completion'];
+      rows = schemes.map(s => [
+        escapeHtml(s.scheme_id),
+        escapeHtml(s.scheme_name),
+        escapeHtml(s.section_officer),
+        escapeHtml(s.contractor),
+        s.tasks,
+        s.avg_completion + '%'
+      ]);
+      break;
+
+    case 'fullyCompleted':
+      title.textContent = 'Fully Completed Schemes';
+      const completed = schemes.filter(s => s.allTasksCompleted);
+      columns = ['Scheme ID', 'Scheme Name', 'Section Officer', 'Contractor', 'Tasks', 'Avg. Completion'];
+      rows = completed.map(s => [
+        escapeHtml(s.scheme_id),
+        escapeHtml(s.scheme_name),
+        escapeHtml(s.section_officer),
+        escapeHtml(s.contractor),
+        s.tasks,
+        '100%'
+      ]);
+      break;
+
+    case 'critical':
+      title.textContent = 'Critical Tasks (due < 7 days)';
+      const criticalTasks = raw.filter(t => {
+        if (t.completion >= 100) return false;
+        const days = t.parsedDate ? Math.ceil((t.parsedDate - state.reportDate) / (1000*60*60*24)) : null;
+        return days !== null && days < 7;
+      });
+      criticalTasks.sort((a, b) => a.parsedDate - b.parsedDate);
+      columns = ['Scheme', 'Section Officer', 'Component', 'Task', 'Due Date', 'Completion', 'Days Left'];
+      rows = criticalTasks.map(t => {
+        const scheme = schemes.find(s => s.scheme_id === t.scheme_id);
+        const days = Math.ceil((t.parsedDate - state.reportDate) / (1000*60*60*24));
+        return [
+          escapeHtml(scheme ? scheme.scheme_name : t.scheme_id),
+          escapeHtml(t.section_officer),
+          escapeHtml(t.component),
+          escapeHtml(t.task),
+          t.due_date || '-',
+          t.completion + '%',
+          days + 'd'
+        ];
+      });
+      break;
+
+    case 'upcoming':
+      title.textContent = 'Upcoming Tasks (due in 8‑30 days)';
+      const upcomingTasks = raw.filter(t => {
+        if (t.completion >= 100) return false;
+        const days = t.parsedDate ? Math.ceil((t.parsedDate - state.reportDate) / (1000*60*60*24)) : null;
+        return days !== null && days >= 7 && days <= 30;
+      });
+      upcomingTasks.sort((a, b) => a.parsedDate - b.parsedDate);
+      columns = ['Scheme', 'Section Officer', 'Component', 'Task', 'Due Date', 'Completion', 'Days Left'];
+      rows = upcomingTasks.map(t => {
+        const scheme = schemes.find(s => s.scheme_id === t.scheme_id);
+        const days = Math.ceil((t.parsedDate - state.reportDate) / (1000*60*60*24));
+        return [
+          escapeHtml(scheme ? scheme.scheme_name : t.scheme_id),
+          escapeHtml(t.section_officer),
+          escapeHtml(t.component),
+          escapeHtml(t.task),
+          t.due_date || '-',
+          t.completion + '%',
+          days + 'd'
+        ];
+      });
+      break;
+
+    case 'scheduled':
+      title.textContent = 'Scheduled Tasks (due > 30 days)';
+      const scheduledTasks = raw.filter(t => {
+        if (t.completion >= 100) return false;
+        const days = t.parsedDate ? Math.ceil((t.parsedDate - state.reportDate) / (1000*60*60*24)) : null;
+        return days === null || days > 30;
+      });
+      scheduledTasks.sort((a, b) => (a.parsedDate || 0) - (b.parsedDate || 0));
+      columns = ['Scheme', 'Section Officer', 'Component', 'Task', 'Due Date', 'Completion', 'Days Left'];
+      rows = scheduledTasks.map(t => {
+        const scheme = schemes.find(s => s.scheme_id === t.scheme_id);
+        const days = t.parsedDate ? Math.ceil((t.parsedDate - state.reportDate) / (1000*60*60*24)) : null;
+        return [
+          escapeHtml(scheme ? scheme.scheme_name : t.scheme_id),
+          escapeHtml(t.section_officer),
+          escapeHtml(t.component),
+          escapeHtml(t.task),
+          t.due_date || '-',
+          t.completion + '%',
+          days !== null ? days + 'd' : '—'
+        ];
+      });
+      break;
+
+    default:
+      return;
+  }
+
+  // Reset sort state every time the modal opens
+  kpiSortState = { column: -1, direction: 'asc' };
+
+  // Sorting helper
+  const sortRows = () => {
+    if (kpiSortState.column >= 0 && kpiSortState.column < columns.length) {
+      const col = kpiSortState.column;
+      const dir = kpiSortState.direction === 'asc' ? 1 : -1;
+      rows.sort((a, b) => {
+        const va = a[col] || '';
+        const vb = b[col] || '';
+        // Try numeric sort (handles "85%", "5d", etc.)
+        const numA = parseFloat(va);
+        const numB = parseFloat(vb);
+        if (!isNaN(numA) && !isNaN(numB) && (va.includes('%') || va.includes('d') || !isNaN(Number(va)))) {
+          return (numA - numB) * dir;
+        }
+        // Fallback to string sort
+        return va.localeCompare(vb) * dir;
+      });
+    }
+  };
+
+  // Render the table (header + tbody)
+  const renderTable = () => {
+    sortRows();
+
+    // Build header with sort icons
+    let headerHtml = '<tr>';
+    columns.forEach((col, idx) => {
+      let icon = '';
+      if (kpiSortState.column === idx) {
+        icon = kpiSortState.direction === 'asc' ? ' ▲' : ' ▼';
+      }
+      headerHtml += `<th class="px-4 py-3 text-left font-bold text-slate-600 uppercase whitespace-nowrap sortable-header" data-col="${idx}" style="cursor: pointer; user-select: none;">${col}${icon}</th>`;
+    });
+    headerHtml += '</tr>';
+
+    // Build tbody
+    let bodyHtml = '';
+    if (rows.length === 0) {
+      bodyHtml = `<tr><td colspan="${columns.length}" class="px-4 py-8 text-center text-slate-400">No items found.</td></tr>`;
+    } else {
+      bodyHtml = rows.map(row => `<tr class="table-row-stripe table-row-hover">${row.map(cell => `<td class="px-4 py-2 border-b border-slate-100 whitespace-nowrap">${cell}</td>`).join('')}</tr>`).join('');
+    }
+
+    content.innerHTML = `
+      <table class="min-w-full text-sm border border-slate-300">
+        <thead class="bg-slate-100" style="position: sticky; top: 0; z-index: 10;">
+          ${headerHtml}
+        </thead>
+        <tbody>
+          ${bodyHtml}
+        </tbody>
+      </table>`;
+
+    // Attach click events to the new headers
+    content.querySelectorAll('th.sortable-header').forEach(th => {
+      th.addEventListener('click', (e) => {
+        const col = parseInt(th.getAttribute('data-col'), 10);
+        if (kpiSortState.column === col) {
+          kpiSortState.direction = kpiSortState.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+          kpiSortState.column = col;
+          kpiSortState.direction = 'asc';
+        }
+        renderTable();
+      });
+    });
+  };
+
+  content.style.overflowX = 'auto';
+  renderTable();
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeKpiModal() {
+  document.getElementById('kpiModal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
 </script>
 
 </body>
