@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
     <title>JJM 2.0 · DWSM Tinsukia Division</title>
 
     <!-- ===== DESIGN TOKENS ===== -->
@@ -83,6 +83,9 @@
             --sidebar-width: 260px;
             --header-height: 64px;
             --drawer-width: 560px;
+
+            /* Touch targets */
+            --touch-min: 44px;
         }
 
         /* ----- Reset & Base ----- */
@@ -97,6 +100,7 @@
         html {
             scroll-behavior: smooth;
             font-size: 16px;
+            -webkit-text-size-adjust: 100%;
         }
 
         body {
@@ -106,6 +110,7 @@
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
         }
 
         /* Focus management */
@@ -137,10 +142,12 @@
             inset: 0;
             background: rgba(15, 23, 42, 0.7);
             backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 9999;
+            padding: var(--space-4);
         }
         .login-overlay.hidden {
             display: none;
@@ -149,11 +156,12 @@
         .login-card {
             background: #fff;
             border-radius: var(--radius-2xl);
-            padding: var(--space-10) var(--space-8);
-            max-width: 380px;
-            width: 92%;
+            padding: var(--space-8) var(--space-6);
+            max-width: 400px;
+            width: 100%;
             box-shadow: var(--shadow-xl);
             border: 1px solid var(--neutral-200);
+            margin: var(--space-4);
         }
         .login-card .brand-icon {
             width: 60px;
@@ -201,11 +209,13 @@
         }
         .login-card .form-group input {
             width: 100%;
-            padding: 0.65rem var(--space-4);
+            padding: 0.75rem var(--space-4);
             border: 1px solid var(--neutral-300);
             border-radius: var(--radius);
-            font-size: var(--text-sm);
+            font-size: var(--text-base);
             transition: border var(--transition), box-shadow var(--transition);
+            min-height: var(--touch-min);
+            -webkit-appearance: none;
         }
         .login-card .form-group input:focus {
             border-color: var(--brand-primary);
@@ -215,7 +225,7 @@
         .login-card .btn-login {
             width: 100%;
             margin-top: var(--space-5);
-            padding: 0.7rem;
+            padding: 0.75rem;
             background: var(--brand-primary);
             color: #fff;
             border: none;
@@ -228,6 +238,7 @@
             align-items: center;
             justify-content: center;
             gap: var(--space-2);
+            min-height: var(--touch-min);
         }
         .login-card .btn-login:hover {
             background: var(--brand-primary-light);
@@ -235,6 +246,22 @@
         }
         .login-card .btn-login:active {
             transform: translateY(0);
+        }
+
+        /* ===== SIDEBAR OVERLAY (mobile) ===== */
+        .sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            z-index: 99;
+            display: none;
+            opacity: 0;
+            transition: opacity var(--transition-slow);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .sidebar-overlay.open {
+            display: block;
+            opacity: 1;
         }
 
         /* ===== SIDEBAR ===== */
@@ -255,11 +282,22 @@
             display: flex;
             flex-direction: column;
             transition: transform var(--transition-slow);
-            transform: translateX(0);
-            overflow-y: auto;
-        }
-        .sidebar.collapsed {
             transform: translateX(-100%);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+        .sidebar.open {
+            transform: translateX(0);
+        }
+        /* Desktop: always visible */
+        @media (min-width: 1025px) {
+            .sidebar {
+                transform: translateX(0) !important;
+            }
+            .sidebar-overlay {
+                display: none !important;
+            }
         }
 
         .sidebar-brand {
@@ -269,6 +307,7 @@
             display: flex;
             align-items: center;
             gap: var(--space-3);
+            min-height: var(--header-height);
         }
         .sidebar-brand .brand-icon {
             width: 40px;
@@ -299,6 +338,7 @@
             flex: 1;
             padding: var(--space-3) var(--space-3) var(--space-6);
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         .sidebar-nav .nav-label {
             font-size: var(--text-xs);
@@ -312,7 +352,7 @@
             display: flex;
             align-items: center;
             gap: var(--space-3);
-            padding: 0.55rem var(--space-3);
+            padding: 0.6rem var(--space-3);
             border-radius: var(--radius);
             color: rgba(255, 255, 255, 0.75);
             text-decoration: none;
@@ -324,6 +364,9 @@
             background: transparent;
             width: 100%;
             text-align: left;
+            min-height: var(--touch-min);
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         .sidebar-nav .nav-item:hover {
             background: rgba(255, 255, 255, 0.08);
@@ -335,9 +378,9 @@
             font-weight: 600;
         }
         .sidebar-nav .nav-item .icon {
-            width: 20px;
+            width: 24px;
             text-align: center;
-            font-size: 0.95rem;
+            font-size: 1rem;
             flex-shrink: 0;
         }
         .sidebar-nav .nav-item .badge {
@@ -349,6 +392,10 @@
             padding: 0.05rem 0.5rem;
             border-radius: 999px;
             line-height: 1.5;
+        }
+        .sidebar-nav .nav-item .nav-text {
+            flex: 1;
+            word-break: break-word;
         }
 
         .sidebar-footer {
@@ -363,12 +410,17 @@
         /* ===== MAIN CONTENT ===== */
         .main-content {
             flex: 1;
-            margin-left: var(--sidebar-width);
+            margin-left: 0;
             min-height: 100vh;
             transition: margin var(--transition-slow);
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
         }
-        .main-content.expanded {
-            margin-left: 0;
+        @media (min-width: 1025px) {
+            .main-content {
+                margin-left: var(--sidebar-width);
+            }
         }
 
         /* ===== HEADER ===== */
@@ -376,20 +428,24 @@
             position: sticky;
             top: 0;
             z-index: 50;
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--neutral-200);
-            padding: 0 var(--space-5);
+            padding: 0 var(--space-3);
             height: var(--header-height);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: var(--space-4);
+            gap: var(--space-2);
+            min-height: var(--header-height);
         }
         .app-header .left {
             display: flex;
             align-items: center;
-            gap: var(--space-3);
+            gap: var(--space-2);
+            min-width: 0;
+            flex: 1;
         }
         .app-header .left .menu-btn {
             background: none;
@@ -397,45 +453,68 @@
             font-size: 1.25rem;
             color: var(--neutral-600);
             cursor: pointer;
-            padding: var(--space-1);
+            padding: var(--space-2);
             border-radius: var(--radius);
-            display: none;
+            display: block;
             transition: background var(--transition);
+            min-height: var(--touch-min);
+            min-width: var(--touch-min);
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
         .app-header .left .menu-btn:hover {
             background: var(--neutral-100);
         }
+        @media (min-width: 1025px) {
+            .app-header .left .menu-btn {
+                display: none;
+            }
+        }
         .app-header .left .title {
             font-weight: 700;
-            font-size: var(--text-base);
+            font-size: var(--text-sm);
             color: var(--neutral-900);
             letter-spacing: -0.01em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .app-header .left .title small {
             font-weight: 400;
             font-size: var(--text-xs);
             color: var(--neutral-500);
-            display: inline-block;
-            margin-left: var(--space-2);
+            display: none;
+        }
+        @media (min-width: 480px) {
+            .app-header .left .title small {
+                display: inline-block;
+                margin-left: var(--space-2);
+            }
         }
         .app-header .right {
             display: flex;
             align-items: center;
-            gap: var(--space-3);
+            gap: var(--space-2);
+            flex-shrink: 0;
         }
         .app-header .right .last-updated {
             font-size: var(--text-xs);
             color: var(--neutral-500);
-            display: flex;
+            display: none;
             align-items: center;
             gap: var(--space-1);
+        }
+        @media (min-width: 640px) {
+            .app-header .right .last-updated {
+                display: flex;
+            }
         }
         .app-header .right .last-updated .time {
             font-weight: 600;
             color: var(--neutral-700);
         }
         .app-header .right .btn {
-            padding: 0.4rem 0.9rem;
+            padding: 0.4rem 0.6rem;
             border-radius: var(--radius);
             font-size: var(--text-sm);
             font-weight: 600;
@@ -444,8 +523,24 @@
             transition: background var(--transition), transform var(--transition);
             display: inline-flex;
             align-items: center;
-            gap: var(--space-1.5);
-            text-decoration: none;
+            gap: var(--space-1);
+            min-height: var(--touch-min);
+            min-width: var(--touch-min);
+            justify-content: center;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            white-space: nowrap;
+        }
+        .app-header .right .btn span {
+            display: none;
+        }
+        @media (min-width: 480px) {
+            .app-header .right .btn span {
+                display: inline;
+            }
+            .app-header .right .btn {
+                padding: 0.4rem 0.8rem;
+            }
         }
         .app-header .right .btn-primary {
             background: var(--brand-primary);
@@ -471,12 +566,32 @@
             background: #0f766e;
             transform: translateY(-1px);
         }
+        .app-header .right #userRole {
+            font-size: var(--text-xs);
+            color: var(--neutral-600);
+            display: none;
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        @media (min-width: 480px) {
+            .app-header .right #userRole {
+                max-width: 150px;
+            }
+        }
 
         /* ===== PAGE CONTAINER ===== */
         .page-container {
-            padding: var(--space-5) var(--space-6) var(--space-10);
+            padding: var(--space-3) var(--space-3) var(--space-8);
             max-width: 1440px;
             margin: 0 auto;
+            width: 100%;
+        }
+        @media (min-width: 640px) {
+            .page-container {
+                padding: var(--space-5) var(--space-6) var(--space-10);
+            }
         }
 
         /* ===== LOADING SKELETON ===== */
@@ -497,44 +612,69 @@
         }
         .skeleton-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: var(--space-4);
-            margin-bottom: var(--space-6);
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-3);
+            margin-bottom: var(--space-4);
+        }
+        @media (min-width: 480px) {
+            .skeleton-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        @media (min-width: 768px) {
+            .skeleton-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
         }
         .skeleton-grid .card {
             background: #fff;
             border-radius: var(--radius-lg);
-            padding: var(--space-4);
+            padding: var(--space-3);
             border: 1px solid var(--neutral-200);
         }
         .skeleton-grid .card .skeleton {
-            height: 28px;
+            height: 24px;
             margin-bottom: var(--space-2);
         }
         .skeleton-grid .card .skeleton-sm {
-            height: 16px;
+            height: 14px;
             width: 60%;
         }
 
         /* ===== STAT CARDS ===== */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: var(--space-4);
-            margin-bottom: var(--space-6);
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-3);
+            margin-bottom: var(--space-4);
+        }
+        @media (min-width: 480px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        @media (min-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
         }
         .stat-card {
             background: #fff;
             border-radius: var(--radius-lg);
-            padding: var(--space-4) var(--space-5);
+            padding: var(--space-3) var(--space-3);
             border: 1px solid var(--neutral-200);
             box-shadow: var(--shadow-sm);
             transition: transform var(--transition), box-shadow var(--transition);
             cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         .stat-card:hover {
             transform: translateY(-2px);
             box-shadow: var(--shadow-md);
+        }
+        .stat-card:active {
+            transform: scale(0.98);
         }
         .stat-card .label {
             font-size: var(--text-xs);
@@ -545,18 +685,29 @@
             display: flex;
             align-items: center;
             gap: var(--space-2);
+            flex-wrap: wrap;
+        }
+        .stat-card .label i {
+            font-size: 0.8rem;
         }
         .stat-card .value {
-            font-size: var(--text-2xl);
+            font-size: var(--text-xl);
             font-weight: 800;
             color: var(--neutral-900);
-            margin-top: var(--space-1);
+            margin-top: var(--space-0);
             letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+        @media (min-width: 480px) {
+            .stat-card .value {
+                font-size: var(--text-2xl);
+            }
         }
         .stat-card .sub {
             font-size: var(--text-xs);
             color: var(--neutral-400);
-            margin-top: var(--space-0.5);
+            margin-top: var(--space-0);
+            line-height: 1.3;
         }
         .stat-card.border-success {
             border-top: 3px solid var(--color-success);
@@ -578,18 +729,26 @@
         .filter-bar {
             background: #fff;
             border-radius: var(--radius-lg);
-            padding: var(--space-4) var(--space-5);
+            padding: var(--space-3);
             border: 1px solid var(--neutral-200);
             box-shadow: var(--shadow-sm);
-            margin-bottom: var(--space-5);
+            margin-bottom: var(--space-4);
             display: flex;
-            flex-wrap: wrap;
-            align-items: center;
+            flex-direction: column;
             gap: var(--space-3);
+        }
+        @media (min-width: 640px) {
+            .filter-bar {
+                flex-direction: row;
+                flex-wrap: wrap;
+                align-items: center;
+                padding: var(--space-4) var(--space-5);
+                gap: var(--space-3);
+            }
         }
         .filter-bar .search-wrap {
             flex: 1;
-            min-width: 180px;
+            min-width: 140px;
             position: relative;
         }
         .filter-bar .search-wrap .icon {
@@ -602,11 +761,13 @@
         }
         .filter-bar .search-wrap input {
             width: 100%;
-            padding: 0.5rem var(--space-3) 0.5rem 2.2rem;
+            padding: 0.6rem var(--space-3) 0.6rem 2.2rem;
             border: 1px solid var(--neutral-300);
             border-radius: var(--radius);
             font-size: var(--text-sm);
             transition: border var(--transition), box-shadow var(--transition);
+            min-height: var(--touch-min);
+            -webkit-appearance: none;
         }
         .filter-bar .search-wrap input:focus {
             border-color: var(--brand-primary);
@@ -618,9 +779,10 @@
             flex-wrap: wrap;
             gap: var(--space-2);
             align-items: center;
+            flex: 1 1 auto;
         }
         .filter-bar .filter-group select {
-            padding: 0.45rem 0.8rem;
+            padding: 0.5rem 0.6rem;
             border: 1px solid var(--neutral-300);
             border-radius: var(--radius);
             font-size: var(--text-sm);
@@ -628,19 +790,39 @@
             color: var(--neutral-700);
             cursor: pointer;
             transition: border var(--transition);
+            min-height: var(--touch-min);
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            padding-right: 28px;
+            flex: 1 1 100px;
+            min-width: 80px;
+        }
+        @media (min-width: 480px) {
+            .filter-bar .filter-group select {
+                flex: 0 1 auto;
+                min-width: 100px;
+            }
         }
         .filter-bar .filter-group select:focus {
             border-color: var(--brand-primary);
             outline: none;
         }
         .filter-bar .filter-group .btn {
-            padding: 0.45rem 1rem;
+            padding: 0.5rem 0.8rem;
             border-radius: var(--radius);
             font-size: var(--text-sm);
             font-weight: 600;
             border: none;
             cursor: pointer;
             transition: background var(--transition);
+            min-height: var(--touch-min);
+            min-width: var(--touch-min);
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            white-space: nowrap;
         }
         .filter-bar .filter-group .btn-clear {
             background: var(--neutral-100);
@@ -666,13 +848,21 @@
             box-shadow: var(--shadow-sm);
         }
         .table-container .table-header {
-            padding: var(--space-4) var(--space-5);
+            padding: var(--space-3) var(--space-3);
             border-bottom: 1px solid var(--neutral-200);
             display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-            gap: var(--space-3);
+            flex-direction: column;
+            gap: var(--space-2);
+            align-items: stretch;
+        }
+        @media (min-width: 480px) {
+            .table-container .table-header {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                padding: var(--space-4) var(--space-5);
+                gap: var(--space-3);
+            }
         }
         .table-container .table-header h3 {
             font-size: var(--text-base);
@@ -685,7 +875,7 @@
             gap: var(--space-2);
         }
         .table-container .table-header .actions .btn {
-            padding: 0.35rem 0.9rem;
+            padding: 0.4rem 0.7rem;
             border-radius: var(--radius);
             font-size: var(--text-sm);
             font-weight: 600;
@@ -694,7 +884,11 @@
             transition: background var(--transition);
             display: inline-flex;
             align-items: center;
-            gap: var(--space-1.5);
+            gap: var(--space-1);
+            min-height: var(--touch-min);
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            white-space: nowrap;
         }
         .table-container .table-header .actions .btn-excel {
             background: var(--color-success);
@@ -714,18 +908,28 @@
         .table-scroll {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+            overscroll-behavior: contain;
+            touch-action: pan-x pan-y;
         }
         .table-scroll table {
             width: 100%;
             border-collapse: collapse;
             font-size: var(--text-sm);
+            min-width: 700px;
+        }
+        @media (max-width: 480px) {
+            .table-scroll table {
+                font-size: var(--text-xs);
+                min-width: 600px;
+            }
         }
         .table-scroll table thead {
             background: var(--neutral-50);
             border-bottom: 1px solid var(--neutral-200);
         }
         .table-scroll table thead th {
-            padding: 0.7rem var(--space-4);
+            padding: 0.6rem var(--space-2);
             text-align: left;
             font-size: var(--text-xs);
             font-weight: 700;
@@ -739,6 +943,12 @@
             top: 0;
             background: var(--neutral-50);
             z-index: 2;
+            min-height: var(--touch-min);
+        }
+        @media (min-width: 640px) {
+            .table-scroll table thead th {
+                padding: 0.7rem var(--space-4);
+            }
         }
         .table-scroll table thead th .sort-icon {
             opacity: 0.3;
@@ -764,9 +974,15 @@
             border-left: 3px solid var(--color-danger);
         }
         .table-scroll table tbody td {
-            padding: 0.6rem var(--space-4);
+            padding: 0.5rem var(--space-2);
             vertical-align: middle;
-            font-size: var(--text-sm);
+            font-size: var(--text-xs);
+        }
+        @media (min-width: 640px) {
+            .table-scroll table tbody td {
+                padding: 0.6rem var(--space-4);
+                font-size: var(--text-sm);
+            }
         }
         .table-scroll table tbody td .progress {
             display: flex;
@@ -774,11 +990,17 @@
             gap: var(--space-2);
         }
         .table-scroll table tbody td .progress .bar {
-            width: 80px;
+            width: 50px;
             height: 6px;
             border-radius: 999px;
             background: var(--neutral-200);
             overflow: hidden;
+            flex-shrink: 0;
+        }
+        @media (min-width: 480px) {
+            .table-scroll table tbody td .progress .bar {
+                width: 80px;
+            }
         }
         .table-scroll table tbody td .progress .bar .fill {
             height: 100%;
@@ -795,12 +1017,20 @@
         .table-scroll table tbody td .progress .bar .fill.high {
             background: var(--color-success);
         }
+        .table-scroll table tbody td .progress span {
+            font-weight: 700;
+            font-size: var(--text-xs);
+            width: 32px;
+            text-align: right;
+            flex-shrink: 0;
+        }
         .table-scroll table tbody td .badge {
             display: inline-block;
-            padding: 0.05rem 0.6rem;
+            padding: 0.05rem 0.5rem;
             border-radius: 999px;
             font-size: var(--text-xs);
             font-weight: 700;
+            white-space: nowrap;
         }
         .table-scroll table tbody td .badge-critical {
             background: var(--color-danger-bg);
@@ -819,11 +1049,20 @@
             border: none;
             color: var(--brand-primary);
             font-weight: 600;
-            font-size: var(--text-sm);
+            font-size: var(--text-xs);
             cursor: pointer;
             padding: var(--space-1) var(--space-2);
             border-radius: var(--radius-sm);
             transition: background var(--transition);
+            min-height: var(--touch-min);
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            white-space: nowrap;
+        }
+        @media (min-width: 480px) {
+            .table-scroll table tbody td .btn-link {
+                font-size: var(--text-sm);
+            }
         }
         .table-scroll table tbody td .btn-link:hover {
             background: var(--neutral-100);
@@ -832,12 +1071,16 @@
             background: var(--color-danger-bg);
             color: var(--color-danger);
             border: 1px solid var(--color-danger);
-            padding: 0.15rem 0.6rem;
+            padding: 0.15rem 0.5rem;
             border-radius: var(--radius-sm);
             font-size: var(--text-xs);
             font-weight: 700;
             cursor: pointer;
             transition: background var(--transition);
+            min-height: 30px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            white-space: nowrap;
         }
         .table-scroll table tbody td .btn-scn:hover {
             background: var(--color-danger);
@@ -845,30 +1088,42 @@
         }
 
         .table-footer {
-            padding: var(--space-3) var(--space-5);
+            padding: var(--space-3) var(--space-3);
             border-top: 1px solid var(--neutral-200);
             display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
+            flex-direction: column;
             gap: var(--space-3);
+            align-items: center;
             background: var(--neutral-50);
             font-size: var(--text-sm);
             color: var(--neutral-500);
+        }
+        @media (min-width: 480px) {
+            .table-footer {
+                flex-direction: row;
+                justify-content: space-between;
+                padding: var(--space-3) var(--space-5);
+                gap: var(--space-3);
+            }
         }
         .table-footer .pagination {
             display: flex;
             gap: var(--space-1);
             flex-wrap: wrap;
+            justify-content: center;
         }
         .table-footer .pagination button {
-            padding: 0.2rem 0.7rem;
+            padding: 0.2rem 0.6rem;
             border: 1px solid var(--neutral-300);
             border-radius: var(--radius-sm);
             background: #fff;
             font-size: var(--text-sm);
             cursor: pointer;
             transition: all var(--transition);
+            min-height: 32px;
+            min-width: 32px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
         .table-footer .pagination button:hover:not(:disabled) {
             background: var(--neutral-100);
@@ -888,12 +1143,22 @@
             background: var(--neutral-50);
         }
         .detail-row .detail-content {
-            padding: var(--space-4) var(--space-5);
+            padding: var(--space-3) var(--space-3);
+        }
+        @media (min-width: 640px) {
+            .detail-row .detail-content {
+                padding: var(--space-4) var(--space-5);
+            }
         }
         .detail-row .detail-content .grid-2 {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: var(--space-4);
+            grid-template-columns: 1fr;
+            gap: var(--space-3);
+        }
+        @media (min-width: 480px) {
+            .detail-row .detail-content .grid-2 {
+                grid-template-columns: 1fr 1fr;
+            }
         }
         .detail-row .detail-content .grid-2 .item .label {
             font-size: var(--text-xs);
@@ -905,16 +1170,26 @@
         .detail-row .detail-content .grid-2 .item .value {
             font-weight: 600;
             color: var(--neutral-800);
+            word-break: break-word;
         }
         .detail-row .detail-content .task-list {
             margin-top: var(--space-3);
             border-top: 1px solid var(--neutral-200);
             padding-top: var(--space-3);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
         .detail-row .detail-content .task-list table {
             width: 100%;
-            font-size: var(--text-sm);
+            font-size: var(--text-xs);
             border-collapse: collapse;
+            min-width: 400px;
+        }
+        @media (min-width: 640px) {
+            .detail-row .detail-content .task-list table {
+                font-size: var(--text-sm);
+                min-width: unset;
+            }
         }
         .detail-row .detail-content .task-list table th {
             text-align: left;
@@ -933,7 +1208,8 @@
             width: 8px;
             height: 8px;
             border-radius: 999px;
-            margin-right: var(--space-1.5);
+            margin-right: var(--space-1);
+            flex-shrink: 0;
         }
         .detail-row .detail-content .task-list table .status-dot.critical {
             background: var(--color-danger);
@@ -954,6 +1230,7 @@
             inset: 0;
             background: rgba(15, 23, 42, 0.4);
             backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             z-index: 200;
             display: none;
             opacity: 0;
@@ -969,8 +1246,8 @@
             top: 0;
             right: 0;
             bottom: 0;
-            width: var(--drawer-width);
-            max-width: 92vw;
+            width: 92vw;
+            max-width: 560px;
             background: #fff;
             z-index: 201;
             transform: translateX(100%);
@@ -983,24 +1260,44 @@
         .drawer.open {
             transform: translateX(0);
         }
+        @media (min-width: 640px) {
+            .drawer {
+                width: var(--drawer-width);
+                max-width: 90vw;
+            }
+        }
         .drawer .drawer-header {
-            padding: var(--space-4) var(--space-5);
+            padding: var(--space-3) var(--space-4);
             border-bottom: 1px solid var(--neutral-200);
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-shrink: 0;
             background: #fff;
+            gap: var(--space-2);
+            min-height: var(--header-height);
+        }
+        @media (min-width: 640px) {
+            .drawer .drawer-header {
+                padding: var(--space-4) var(--space-5);
+            }
         }
         .drawer .drawer-header .title {
-            font-size: var(--text-lg);
+            font-size: var(--text-base);
             font-weight: 700;
             color: var(--neutral-900);
+            word-break: break-word;
+        }
+        @media (min-width: 640px) {
+            .drawer .drawer-header .title {
+                font-size: var(--text-lg);
+            }
         }
         .drawer .drawer-header .title .sub {
             font-size: var(--text-sm);
             font-weight: 400;
             color: var(--neutral-500);
+            display: block;
         }
         .drawer .drawer-header .close-btn {
             background: none;
@@ -1008,9 +1305,14 @@
             font-size: 1.5rem;
             color: var(--neutral-500);
             cursor: pointer;
-            padding: var(--space-1);
+            padding: var(--space-2);
             border-radius: var(--radius);
             transition: background var(--transition);
+            min-height: var(--touch-min);
+            min-width: var(--touch-min);
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            flex-shrink: 0;
         }
         .drawer .drawer-header .close-btn:hover {
             background: var(--neutral-100);
@@ -1018,7 +1320,13 @@
         .drawer .drawer-body {
             flex: 1;
             overflow-y: auto;
-            padding: var(--space-5);
+            padding: var(--space-3);
+            -webkit-overflow-scrolling: touch;
+        }
+        @media (min-width: 640px) {
+            .drawer .drawer-body {
+                padding: var(--space-5);
+            }
         }
         .drawer .drawer-body .section-title {
             font-size: var(--text-sm);
@@ -1030,16 +1338,22 @@
             border-bottom: 1px solid var(--neutral-200);
         }
         .drawer .drawer-footer {
-            padding: var(--space-3) var(--space-5);
+            padding: var(--space-3) var(--space-4);
             border-top: 1px solid var(--neutral-200);
             display: flex;
             gap: var(--space-2);
             flex-shrink: 0;
             background: #fff;
             flex-wrap: wrap;
+            align-items: center;
+        }
+        @media (min-width: 640px) {
+            .drawer .drawer-footer {
+                padding: var(--space-3) var(--space-5);
+            }
         }
         .drawer .drawer-footer .btn {
-            padding: 0.4rem 1rem;
+            padding: 0.4rem 0.8rem;
             border-radius: var(--radius);
             font-size: var(--text-sm);
             font-weight: 600;
@@ -1048,7 +1362,11 @@
             transition: all var(--transition);
             display: inline-flex;
             align-items: center;
-            gap: var(--space-1.5);
+            gap: var(--space-1);
+            min-height: var(--touch-min);
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            white-space: nowrap;
         }
         .drawer .drawer-footer .btn-primary {
             background: var(--brand-primary);
@@ -1090,19 +1408,27 @@
         /* ===== TOAST ===== */
         .toast-container {
             position: fixed;
-            bottom: var(--space-6);
-            right: var(--space-6);
+            bottom: var(--space-4);
+            right: var(--space-4);
             z-index: 999;
             display: flex;
             flex-direction: column;
             gap: var(--space-2);
             max-width: 380px;
-            width: 92%;
+            width: calc(100% - var(--space-8));
+            pointer-events: none;
+        }
+        @media (min-width: 640px) {
+            .toast-container {
+                bottom: var(--space-6);
+                right: var(--space-6);
+                width: 380px;
+            }
         }
         .toast {
             background: #fff;
             border-radius: var(--radius-lg);
-            padding: var(--space-4) var(--space-5);
+            padding: var(--space-3) var(--space-4);
             box-shadow: var(--shadow-lg);
             border-left: 4px solid var(--color-success);
             display: flex;
@@ -1111,6 +1437,7 @@
             transform: translateY(20px);
             opacity: 0;
             transition: all var(--transition-slow);
+            pointer-events: auto;
         }
         .toast.show {
             transform: translateY(0);
@@ -1138,6 +1465,7 @@
         .toast .content .msg {
             font-size: var(--text-sm);
             color: var(--neutral-500);
+            word-break: break-word;
         }
         .toast .close {
             background: none;
@@ -1148,6 +1476,10 @@
             padding: var(--space-1);
             margin-left: auto;
             flex-shrink: 0;
+            min-height: var(--touch-min);
+            min-width: var(--touch-min);
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
 
         /* ===== OVERDUE RIBBON ===== */
@@ -1162,14 +1494,23 @@
             white-space: nowrap;
             cursor: pointer;
             display: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         .overdue-ribbon .content {
             display: inline-block;
             padding-left: 100%;
             animation: scroll-left 28s linear infinite;
+            will-change: transform;
         }
         .overdue-ribbon:hover .content {
             animation-play-state: paused;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .overdue-ribbon .content {
+                animation: none;
+                padding-left: 0;
+            }
         }
         @keyframes scroll-left {
             0% {
@@ -1181,7 +1522,12 @@
         }
         .overdue-ribbon .content .item {
             display: inline-block;
-            margin: 0 20px;
+            margin: 0 12px;
+        }
+        @media (min-width: 640px) {
+            .overdue-ribbon .content .item {
+                margin: 0 20px;
+            }
         }
         .overdue-ribbon .content .item .icon {
             margin-right: var(--space-1);
@@ -1191,14 +1537,22 @@
         .quick-report-bar {
             background: #fff;
             border-radius: var(--radius-lg);
-            padding: var(--space-4) var(--space-5);
+            padding: var(--space-3);
             border: 1px solid var(--neutral-200);
             box-shadow: var(--shadow-sm);
-            margin-bottom: var(--space-5);
+            margin-bottom: var(--space-4);
             display: flex;
-            flex-wrap: wrap;
-            align-items: center;
+            flex-direction: column;
             gap: var(--space-3);
+        }
+        @media (min-width: 640px) {
+            .quick-report-bar {
+                flex-direction: row;
+                flex-wrap: wrap;
+                align-items: center;
+                padding: var(--space-4) var(--space-5);
+                gap: var(--space-3);
+            }
         }
         .quick-report-bar label {
             font-size: var(--text-xs);
@@ -1206,30 +1560,49 @@
             text-transform: uppercase;
             letter-spacing: 0.04em;
             color: var(--neutral-500);
+            flex-shrink: 0;
         }
         .quick-report-bar select {
-            padding: 0.45rem 0.8rem;
+            padding: 0.5rem 0.6rem;
             border: 1px solid var(--neutral-300);
             border-radius: var(--radius);
             font-size: var(--text-sm);
             background: #fff;
             color: var(--neutral-700);
             cursor: pointer;
-            min-width: 180px;
+            min-width: 120px;
             transition: border var(--transition);
+            min-height: var(--touch-min);
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            padding-right: 28px;
+            flex: 1 1 140px;
+        }
+        @media (min-width: 640px) {
+            .quick-report-bar select {
+                flex: 0 1 auto;
+                min-width: 160px;
+            }
         }
         .quick-report-bar select:focus {
             border-color: var(--brand-primary);
             outline: none;
         }
         .quick-report-bar .btn {
-            padding: 0.45rem 1rem;
+            padding: 0.5rem 0.8rem;
             border-radius: var(--radius);
             font-size: var(--text-sm);
             font-weight: 600;
             border: none;
             cursor: pointer;
             transition: background var(--transition);
+            min-height: var(--touch-min);
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            white-space: nowrap;
         }
         .quick-report-bar .btn-amber {
             background: var(--color-warning);
@@ -1244,33 +1617,60 @@
             font-family: 'Times New Roman', Times, serif;
             color: #1a1a1a;
             line-height: 1.6;
-            font-size: 12pt;
+            font-size: 11pt;
             background: #fff;
-            padding: var(--space-5);
+            padding: var(--space-3);
+            overflow-x: auto;
+        }
+        @media (min-width: 640px) {
+            .report-preview {
+                padding: var(--space-5);
+                font-size: 12pt;
+            }
         }
         .report-preview h1 {
-            font-size: 18pt;
+            font-size: 16pt;
             font-weight: 700;
             text-align: center;
         }
+        @media (min-width: 640px) {
+            .report-preview h1 {
+                font-size: 18pt;
+            }
+        }
         .report-preview h2 {
-            font-size: 14pt;
+            font-size: 13pt;
             font-weight: 700;
             margin-top: var(--space-4);
             border-bottom: 1px solid #999;
             padding-bottom: var(--space-1);
         }
+        @media (min-width: 640px) {
+            .report-preview h2 {
+                font-size: 14pt;
+            }
+        }
         .report-preview table {
             width: 100%;
             border-collapse: collapse;
             margin: var(--space-3) 0;
-            font-size: 10pt;
+            font-size: 9pt;
+            overflow-x: auto;
+            display: block;
+            -webkit-overflow-scrolling: touch;
+        }
+        @media (min-width: 640px) {
+            .report-preview table {
+                display: table;
+                font-size: 10pt;
+            }
         }
         .report-preview table th,
         .report-preview table td {
             border: 1px solid #666;
-            padding: 4px 6px;
+            padding: 3px 5px;
             text-align: left;
+            word-break: break-word;
         }
         .report-preview table th {
             background: #f0f0f0;
@@ -1291,7 +1691,7 @@
             padding-top: var(--space-2);
         }
 
-        /* ===== RESPONSIVE ===== */
+        /* ===== RESPONSIVE OVERRIDES ===== */
         @media (max-width: 1024px) {
             .sidebar {
                 transform: translateX(-100%);
@@ -1308,9 +1708,6 @@
             :root {
                 --drawer-width: 90vw;
             }
-            .detail-row .detail-content .grid-2 {
-                grid-template-columns: 1fr;
-            }
         }
 
         @media (max-width: 640px) {
@@ -1321,7 +1718,8 @@
                 display: none;
             }
             .app-header .right .btn {
-                padding: 0.4rem 0.7rem;
+                padding: 0.4rem 0.6rem;
+                min-width: 36px;
             }
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -1335,7 +1733,7 @@
             }
             .filter-bar .filter-group select {
                 flex: 1;
-                min-width: 100px;
+                min-width: 80px;
             }
             .table-container .table-header {
                 flex-direction: column;
@@ -1345,10 +1743,11 @@
                 justify-content: flex-start;
             }
             .page-container {
-                padding: var(--space-3);
+                padding: var(--space-2);
             }
             .login-card {
                 padding: var(--space-6) var(--space-4);
+                margin: var(--space-2);
             }
             .drawer {
                 max-width: 100vw;
@@ -1361,8 +1760,60 @@
             .quick-report-bar select {
                 min-width: unset;
             }
+            .table-footer {
+                flex-direction: column;
+                align-items: center;
+            }
+            .table-footer .pagination button {
+                min-width: 28px;
+                min-height: 28px;
+                font-size: var(--text-xs);
+                padding: 0.1rem 0.4rem;
+            }
+            .stat-card .label {
+                font-size: 0.6rem;
+            }
+            .stat-card .value {
+                font-size: var(--text-lg);
+            }
+            .stat-card .sub {
+                font-size: 0.6rem;
+            }
         }
 
+        @media (max-width: 400px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: var(--space-2);
+            }
+            .stat-card {
+                padding: var(--space-2);
+            }
+            .stat-card .value {
+                font-size: var(--text-base);
+            }
+            .app-header .left .title {
+                font-size: var(--text-xs);
+            }
+            .filter-bar .filter-group .btn {
+                font-size: var(--text-xs);
+                padding: 0.3rem 0.5rem;
+            }
+            .table-scroll table {
+                font-size: 0.65rem;
+                min-width: 500px;
+            }
+            .table-scroll table thead th {
+                font-size: 0.6rem;
+                padding: 0.3rem var(--space-1);
+            }
+            .table-scroll table tbody td {
+                padding: 0.3rem var(--space-1);
+                font-size: 0.65rem;
+            }
+        }
+
+        /* ===== PRINT STYLES ===== */
         @media print {
             .sidebar,
             .app-header,
@@ -1374,7 +1825,8 @@
             .drawer,
             .toast-container,
             .login-overlay,
-            .no-print {
+            .no-print,
+            .sidebar-overlay {
                 display: none !important;
             }
             .main-content {
@@ -1394,6 +1846,7 @@
             .table-scroll table {
                 width: 100% !important;
                 border-collapse: collapse;
+                min-width: unset !important;
             }
             .table-scroll table thead {
                 display: table-header-group !important;
@@ -1440,8 +1893,12 @@
             }
             .report-preview table {
                 page-break-inside: avoid !important;
+                display: table !important;
             }
-            /* Hide the first row (header row) on pages after the first page */
+            .report-preview table th,
+            .report-preview table td {
+                border: 1px solid #666 !important;
+            }
             .report-preview table tr:first-child {
                 page-break-before: avoid !important;
             }
@@ -1458,9 +1915,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+    </script>
 </head>
 
 <body>
@@ -1489,6 +1949,9 @@
     <!-- ===== APP LAYOUT ===== -->
     <div class="app-layout">
 
+        <!-- ===== SIDEBAR OVERLAY (mobile) ===== -->
+        <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
         <!-- ===== SIDEBAR ===== -->
         <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
             <div class="sidebar-brand">
@@ -1501,43 +1964,54 @@
             <nav class="sidebar-nav">
                 <div class="nav-label">Main</div>
                 <button class="nav-item active" data-section="dashboard" aria-current="page">
-                    <span class="icon"><i class="fas fa-chart-pie"></i></span> Dashboard
+                    <span class="icon"><i class="fas fa-chart-pie"></i></span>
+                    <span class="nav-text">Dashboard</span>
                 </button>
                 <button class="nav-item" data-section="schemes">
-                    <span class="icon"><i class="fas fa-layer-group"></i></span> Schemes
+                    <span class="icon"><i class="fas fa-layer-group"></i></span>
+                    <span class="nav-text">Schemes</span>
                     <span class="badge" id="schemeCountBadge">0</span>
                 </button>
                 <button class="nav-item" data-section="reports">
-                    <span class="icon"><i class="fas fa-file-alt"></i></span> Reports
+                    <span class="icon"><i class="fas fa-file-alt"></i></span>
+                    <span class="nav-text">Reports</span>
                 </button>
                 <button class="nav-item" data-section="contractors">
-                    <span class="icon"><i class="fas fa-user-tie"></i></span> Contractors
+                    <span class="icon"><i class="fas fa-user-tie"></i></span>
+                    <span class="nav-text">Contractors</span>
                 </button>
 
-               <div class="nav-label" style="margin-top:var(--space-4);">Tools</div>
+                <div class="nav-label" style="margin-top:var(--space-4);">Tools</div>
                 <button class="nav-item" id="navQuickReports">
-                    <span class="icon"><i class="fas fa-lightbulb"></i></span> Quick Reports
+                    <span class="icon"><i class="fas fa-lightbulb"></i></span>
+                    <span class="nav-text">Quick Reports</span>
                 </button>
                 <button class="nav-item" id="navSCN">
-                    <span class="icon"><i class="fas fa-gavel"></i></span> Show Cause
+                    <span class="icon"><i class="fas fa-gavel"></i></span>
+                    <span class="nav-text">Show Cause</span>
                     <span class="badge" id="scnBadge">0</span>
                 </button>
                 <button class="nav-item" id="navRoadmap">
-                    <span class="icon"><i class="fas fa-road"></i></span> Download Roadmap
+                    <span class="icon"><i class="fas fa-road"></i></span>
+                    <span class="nav-text">Download Roadmap</span>
                 </button>
 
                 <div class="nav-label" style="margin-top:var(--space-4);">External</div>
                 <a class="nav-item" href="https://script.google.com/macros/s/AKfycbzXaWKdRk6AyBRsSwtK0sSkKMNc2KyNJK3FDq9B9E6FwcdpwTWm1bl2cr73UEWN8WPQ/exec?page=tasktracker" target="_blank" rel="noopener">
-                    <span class="icon"><i class="fas fa-tasks" aria-hidden="true"></i></span> Scheme Monitoring — Task Progress Tracker
+                    <span class="icon"><i class="fas fa-tasks" aria-hidden="true"></i></span>
+                    <span class="nav-text">Scheme Monitoring — Task Progress Tracker</span>
                 </a>
                 <a class="nav-item" href="https://script.google.com/macros/s/AKfycbzXaWKdRk6AyBRsSwtK0sSkKMNc2KyNJK3FDq9B9E6FwcdpwTWm1bl2cr73UEWN8WPQ/exec?page=progress" target="_blank" rel="noopener">
-                    <span class="icon"><i class="fas fa-chart-line" aria-hidden="true"></i></span> Progress Monitor
-                </a>                
+                    <span class="icon"><i class="fas fa-chart-line" aria-hidden="true"></i></span>
+                    <span class="nav-text">Progress Monitor</span>
+                </a>
                 <a class="nav-item" href="https://script.google.com/macros/s/AKfycbzXaWKdRk6AyBRsSwtK0sSkKMNc2KyNJK3FDq9B9E6FwcdpwTWm1bl2cr73UEWN8WPQ/exec?page=contractor" target="_blank" rel="noopener">
-                    <span class="icon"><i class="fas fa-user-check" aria-hidden="true"></i></span> By Contractor
+                    <span class="icon"><i class="fas fa-user-check" aria-hidden="true"></i></span>
+                    <span class="nav-text">By Contractor</span>
                 </a>
                 <a class="nav-item" href="https://wa.me/?text=Progress%20By%20Contractor%20Report%3A%20https%3A%2F%2Fscript.google.com%2Fmacros%2Fs%2FAKfycbzXaWKdRk6AyBRsSwtK0sSkKMNc2KyNJK3FDq9B9E6FwcdpwTWm1bl2cr73UEWN8WPQ%2Fexec%3Fpage%3Dcontractor" target="_blank" rel="noopener">
-                    <span class="icon"><i class="fab fa-whatsapp" aria-hidden="true"></i></span> Share
+                    <span class="icon"><i class="fab fa-whatsapp" aria-hidden="true"></i></span>
+                    <span class="nav-text">Share</span>
                 </a>
             </nav>
             <div class="sidebar-footer">v2.0 · DWSM Tinsukia</div>
@@ -1562,7 +2036,7 @@
                         <i class="fas fa-clock" aria-hidden="true"></i>
                         <span>Updated: <span class="time" id="headerLastUpdated">—</span></span>
                     </div>
-                    <div style="font-size:var(--text-sm);color:var(--neutral-600);padding:0 var(--space-3);border-right:1px solid var(--neutral-200);">
+                    <div style="font-size:var(--text-sm);color:var(--neutral-600);padding:0 var(--space-2);border-right:1px solid var(--neutral-200);">
                         <span id="userRole" style="display:none;"></span>
                     </div>
                     <button class="btn btn-success" id="btnExportReport" aria-label="Export report">
@@ -1571,7 +2045,7 @@
                     <button class="btn btn-primary" id="btnPrintReport" aria-label="Print report">
                         <i class="fas fa-print" aria-hidden="true"></i> <span>Print</span>
                     </button>
-                    <button class="btn btn-outline" id="btnLogout" aria-label="Logout" style="margin-left:var(--space-2);">
+                    <button class="btn btn-outline" id="btnLogout" aria-label="Logout" style="margin-left:var(--space-1);">
                         <i class="fas fa-sign-out-alt" aria-hidden="true"></i> <span>Logout</span>
                     </button>
                 </div>
@@ -1983,7 +2457,8 @@
                 e.preventDefault();
                 const user = userInput.value.trim();
                 const pass = passInput.value.trim();
-                
+
+                // Admin login (case‑sensitive)
                 if (user === CONFIG.VALID_USER && pass === CONFIG.VALID_PASS) {
                     sessionStorage.setItem('jjm_loggedIn', 'true');
                     sessionStorage.setItem('jjm_userRole', 'admin');
@@ -1995,20 +2470,22 @@
                     initDashboard();
                     return;
                 }
-                
+
+                // Officer login (case‑insensitive)
                 const validOfficers = Object.keys(OFFICER_SUB_DIVISION);
-                if (validOfficers.includes(user) && pass === CONFIG.VALID_PASS) {
+                const officerMatch = validOfficers.find(o => o.toLowerCase() === user.toLowerCase());
+                if (officerMatch && pass === CONFIG.VALID_PASS) {
                     sessionStorage.setItem('jjm_loggedIn', 'true');
                     sessionStorage.setItem('jjm_userRole', 'officer');
-                    sessionStorage.setItem('jjm_officer', user);
+                    sessionStorage.setItem('jjm_officer', officerMatch); // store the exact key
                     overlay.classList.add('hidden');
                     state.isLoggedIn = true;
                     state.userRole = 'officer';
-                    state.loggedInOfficer = user;
+                    state.loggedInOfficer = officerMatch;
                     initDashboard();
                     return;
                 }
-                
+
                 errorEl.textContent = 'Invalid username or password.';
                 errorEl.style.display = 'block';
                 passInput.focus();
@@ -2079,7 +2556,9 @@
         }
 
         function processCSV(data) {
-            const required = ['scheme_id', 'scheme_name', 'section_officer', 'contractor', 'component', 'task', 'due_date', 'completion'];
+            const required = ['scheme_id', 'scheme_name', 'section_officer', 'contractor', 'component', 'task', 'due_date',
+                'completion'
+            ];
             const headers = Object.keys(data[0] || {}).map(h => h.trim().toLowerCase());
             const missing = required.filter(c => !headers.includes(c));
             if (missing.length) {
@@ -2229,7 +2708,8 @@
         //  SCN TRIGGERS
         // ============================================================
         function checkSCNTriggers() {
-            let totalSCN = 0, totalCriticalTasks = 0;
+            let totalSCN = 0,
+                totalCriticalTasks = 0;
             const schemesToCheck = state.userRole === 'officer' ? state.filtered : state.schemes;
             schemesToCheck.forEach(scheme => {
                 const criticalTasks = state.rawData.filter(r =>
@@ -2300,7 +2780,8 @@
                     s.contractor.toLowerCase().includes(search);
                 const mOfficer = !officer || s.section_officer === officer;
                 const mContractor = !contractor || s.contractor === contractor;
-                const mComponent = !component || state.rawData.some(r => r.scheme_id === s.scheme_id && r.component === component);
+                const mComponent = !component || state.rawData.some(r => r.scheme_id === s.scheme_id && r.component ===
+                    component);
                 return mSearch && mOfficer && mContractor && mComponent;
             });
 
@@ -2325,7 +2806,8 @@
             const col = state.sortColumn;
             const dir = state.sortDirection === 'asc' ? 1 : -1;
             return [...array].sort((a, b) => {
-                let va = a[col], vb = b[col];
+                let va = a[col],
+                    vb = b[col];
                 if (['tasks', 'avg_completion', 'critical', 'upcoming', 'scheduled'].includes(col)) {
                     return (va - vb) * dir;
                 }
@@ -2360,7 +2842,8 @@
 
             const totalItems = state.filtered.length;
             if (totalItems === 0) {
-                tbody.innerHTML = `<tr><td colspan="11" style="padding:var(--space-12);text-align:center;color:var(--neutral-400);"><i class="fas fa-search" style="font-size:2rem;display:block;margin-bottom:var(--space-2);"></i>No schemes match your filters.</td></tr>`;
+                tbody.innerHTML =
+                    `<tr><td colspan="11" style="padding:var(--space-12);text-align:center;color:var(--neutral-400);"><i class="fas fa-search" style="font-size:2rem;display:block;margin-bottom:var(--space-2);"></i>No schemes match your filters.</td></tr>`;
                 renderPagination(0);
                 return;
             }
@@ -2500,11 +2983,13 @@
             const end = Math.min(current * pageSize, totalItems);
             info.textContent = `Showing ${start} to ${end} of ${totalItems} entries`;
 
-            let html = `<button onclick="goToPage(${current-1})" ${current===1?'disabled':''}><i class="fas fa-chevron-left"></i></button>`;
+            let html =
+                `<button onclick="goToPage(${current-1})" ${current===1?'disabled':''}><i class="fas fa-chevron-left"></i></button>`;
             for (let i = 1; i <= totalPages; i++) {
                 html += `<button onclick="goToPage(${i})" class="${i===current?'active':''}\">${i}</button>`;
             }
-            html += `<button onclick="goToPage(${current+1})" ${current===totalPages?'disabled':''}><i class="fas fa-chevron-right"></i></button>`;
+            html +=
+                `<button onclick="goToPage(${current+1})" ${current===totalPages?'disabled':''}><i class="fas fa-chevron-right"></i></button>`;
             container.innerHTML = html;
         }
 
@@ -2531,12 +3016,13 @@
         // ============================================================
         function getAbstractReportData() {
             const monthly = {};
-            const rawDataToUse = state.userRole === 'officer' ? 
-                state.rawData.filter(r => state.filtered.some(s => s.scheme_id === r.scheme_id)) : 
+            const rawDataToUse = state.userRole === 'officer' ?
+                state.rawData.filter(r => state.filtered.some(s => s.scheme_id === r.scheme_id)) :
                 state.rawData;
             rawDataToUse.forEach(row => {
                 if (!row.parsedDate) return;
-                const key = `${row.parsedDate.getFullYear()}-${String(row.parsedDate.getMonth()+1).padStart(2,'0')}`;
+                const key =
+                `${row.parsedDate.getFullYear()}-${String(row.parsedDate.getMonth()+1).padStart(2,'0')}`;
                 if (!monthly[key]) monthly[key] = { count: 0, totalCompletion: 0, completedCount: 0, schemes: {} };
                 monthly[key].count++;
                 monthly[key].totalCompletion += row.completion;
@@ -2624,13 +3110,13 @@
             const ribbon = document.getElementById('overdueRibbon');
             const content = document.getElementById('ribbonContent');
             const today = getToday();
-            
+
             let dataToUse = state.rawData;
             if (state.userRole === 'officer') {
                 const officerSchemeIds = new Set(state.filtered.map(s => s.scheme_id));
                 dataToUse = state.rawData.filter(t => officerSchemeIds.has(t.scheme_id));
             }
-            
+
             const overdue = dataToUse.filter(t => t.parsedDate && t.parsedDate < today && t.completion < 100);
             if (overdue.length === 0) {
                 ribbon.style.display = 'none';
@@ -2665,7 +3151,7 @@
         // ============================================================
         function initDashboard() {
             document.getElementById('headerLastUpdated').textContent = formatDate(state.reportDate);
-            
+
             // Show user role in header
             const userRoleEl = document.getElementById('userRole');
             if (state.userRole === 'officer') {
@@ -2736,12 +3222,15 @@
                     } else {
                         showToast('Navigation', `Switched to ${section} view`, 'info');
                     }
+                    // Close sidebar on mobile after navigation
+                    closeSidebarMobile();
                 });
             });
 
             document.getElementById('navQuickReports').addEventListener('click', () => {
                 document.getElementById('quickReportSelect').focus();
                 document.getElementById('quickReportSelect').scrollIntoView({ behavior: 'smooth' });
+                closeSidebarMobile();
             });
 
             document.getElementById('navSCN').addEventListener('click', () => {
@@ -2751,28 +3240,38 @@
                 } else {
                     showToast('Notice', 'No schemes currently trigger an SCN.', 'info');
                 }
+                closeSidebarMobile();
             });
 
             const navRoadmapBtn = document.getElementById('navRoadmap');
             if (navRoadmapBtn) {
-                navRoadmapBtn.addEventListener('click', openRoadmapModal);
+                navRoadmapBtn.addEventListener('click', () => {
+                    openRoadmapModal();
+                    closeSidebarMobile();
+                });
             }
 
             // Menu toggle
             document.getElementById('menuToggle').addEventListener('click', () => {
                 const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebarOverlay');
                 const isOpen = sidebar.classList.toggle('open');
+                overlay.classList.toggle('open');
                 document.getElementById('menuToggle').setAttribute('aria-expanded', isOpen);
+                document.body.style.overflow = isOpen ? 'hidden' : '';
             });
+
+            // Close sidebar on overlay click
+            document.getElementById('sidebarOverlay').addEventListener('click', closeSidebarMobile);
 
             // Close sidebar on outside click (mobile)
             document.addEventListener('click', (e) => {
                 const sidebar = document.getElementById('sidebar');
                 const menuBtn = document.getElementById('menuToggle');
+                const overlay = document.getElementById('sidebarOverlay');
                 if (window.innerWidth <= 1024 && sidebar.classList.contains('open') &&
                     !sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
-                    sidebar.classList.remove('open');
-                    menuBtn.setAttribute('aria-expanded', 'false');
+                    closeSidebarMobile();
                 }
             });
 
@@ -2826,6 +3325,15 @@
                 pageSizeSelect.value = state.pageSize;
                 pageSizeSelect.addEventListener('change', changePageSize);
             }
+        }
+
+        function closeSidebarMobile() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+            document.getElementById('menuToggle').setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
         }
 
         // ============================================================
@@ -2911,7 +3419,8 @@
         function exportAbstractReportXLSX() {
             if (!state.schemes.length) { showToast('No Data', 'Nothing to export.', 'error'); return; }
             const wb = XLSX.utils.book_new();
-            const dateStr = formatDate(state.reportDate), reportDateISO = formatDateISO(state.reportDate);
+            const dateStr = formatDate(state.reportDate),
+                reportDateISO = formatDateISO(state.reportDate);
 
             function addSheet(name, headers, rows) {
                 const data = [headers, ...rows];
@@ -2944,7 +3453,8 @@
                 s.tasks, state.rawData.filter(r => r.scheme_id === s.scheme_id && r.completion >= 100).length,
                 s.avg_completion + '%', s.latestDueDate ? formatDate(s.latestDueDate) : 'N/A'
             ]);
-            addSheet('Contractor-wise', ['Sl.', 'Contractor', 'Scheme', 'Officer', 'Tasks', 'Completed', '%', 'Final Due'], contractorRows);
+            addSheet('Contractor-wise', ['Sl.', 'Contractor', 'Scheme', 'Officer', 'Tasks', 'Completed', '%', 'Final Due'],
+                contractorRows);
 
             const compMap = {};
             state.rawData.forEach(r => {
@@ -2959,7 +3469,9 @@
                     else if (days !== null) compMap[c].scheduled++;
                 }
             });
-            const compRows = Object.entries(compMap).map(([c, d]) => [c, d.tasks, Math.round(d.total / d.tasks) + '%', d.critical, d.upcoming, d.scheduled]);
+            const compRows = Object.entries(compMap).map(([c, d]) => [c, d.tasks, Math.round(d.total / d.tasks) + '%', d
+                .critical, d.upcoming, d.scheduled
+            ]);
             addSheet('Component-wise', ['Component', 'Tasks', 'Avg %', 'Critical', 'Upcoming', 'Scheduled'], compRows);
 
             const offMap = {};
@@ -2973,14 +3485,20 @@
                 offMap[o].upcoming += s.upcoming;
                 offMap[o].scheduled += s.scheduled;
             });
-            const offRows = Object.entries(offMap).map(([o, d]) => [o, d.schemes, d.tasks, Math.round(d.total / d.tasks) + '%', d.critical, d.upcoming, d.scheduled]);
-            addSheet('Officer-wise', ['Officer', 'Schemes', 'Tasks', 'Avg %', 'Critical', 'Upcoming', 'Scheduled'], offRows);
+            const offRows = Object.entries(offMap).map(([o, d]) => [o, d.schemes, d.tasks, Math.round(d.total / d.tasks) +
+                '%', d.critical, d.upcoming, d.scheduled
+            ]);
+            addSheet('Officer-wise', ['Officer', 'Schemes', 'Tasks', 'Avg %', 'Critical', 'Upcoming', 'Scheduled'],
+            offRows);
 
             const schemeRows = [...schemesToExport].sort((a, b) => a.section_officer.localeCompare(b.section_officer)).map(
                 s => [s.scheme_id, s.scheme_name || 'N/A', s.section_officer || 'N/A', s.contractor || 'N/A',
-                    s.tasks, s.avg_completion + '%', s.critical, s.upcoming, s.scheduled, s.scnTriggered ? 'Yes' : 'No'
+                    s.tasks, s.avg_completion + '%', s.critical, s.upcoming, s.scheduled, s.scnTriggered ? 'Yes' :
+                    'No'
                 ]);
-            addSheet('Scheme-wise', ['ID', 'Name', 'Officer', 'Contractor', 'Tasks', '%', 'Critical', 'Upcoming', 'Scheduled', 'SCN'], schemeRows);
+            addSheet('Scheme-wise', ['ID', 'Name', 'Officer', 'Contractor', 'Tasks', '%', 'Critical', 'Upcoming',
+                'Scheduled', 'SCN'
+            ], schemeRows);
 
             XLSX.writeFile(wb, `abstract_report_${reportDateISO}.xlsx`);
             showToast('Exported', `Excel report saved as abstract_report_${reportDateISO}.xlsx`, 'success');
@@ -2989,10 +3507,14 @@
         function exportToCSV() {
             if (!state.filtered.length) { showToast('No Data', 'Nothing to export.', 'error'); return; }
             const rows = [
-                ['Scheme ID', 'Scheme Name', 'Section Officer', 'Contractor', 'Tasks', 'Avg Completion %', 'Critical', 'Upcoming', 'Scheduled', 'SCN Triggered']
+                ['Scheme ID', 'Scheme Name', 'Section Officer', 'Contractor', 'Tasks', 'Avg Completion %', 'Critical',
+                    'Upcoming', 'Scheduled', 'SCN Triggered'
+                ]
             ];
             state.filtered.forEach(s => {
-                rows.push([s.scheme_id, s.scheme_name, s.section_officer, s.contractor, s.tasks, s.avg_completion + '%', s.critical, s.upcoming, s.scheduled, s.scnTriggered ? 'Yes' : 'No']);
+                rows.push([s.scheme_id, s.scheme_name, s.section_officer, s.contractor, s.tasks, s.avg_completion +
+                    '%', s.critical, s.upcoming, s.scheduled, s.scnTriggered ? 'Yes' : 'No'
+                ]);
             });
             const csv = rows.map(r => r.map(c => '"' + (c + '').replace(/"/g, '""') + '"').join(',')).join('\n');
             const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -3029,10 +3551,12 @@
         //  KPI DETAIL IN DRAWER
         // ============================================================
         function showKpiDetail(type) {
-            let title = '', columns = [], rows = [];
+            let title = '',
+                columns = [],
+                rows = [];
             const schemes = state.userRole === 'officer' ? state.filtered : state.schemes;
-            const raw = state.userRole === 'officer' ? 
-                state.rawData.filter(r => schemes.some(s => s.scheme_id === r.scheme_id)) : 
+            const raw = state.userRole === 'officer' ?
+                state.rawData.filter(r => schemes.some(s => s.scheme_id === r.scheme_id)) :
                 state.rawData;
             const today = getToday();
 
@@ -3040,13 +3564,15 @@
                 case 'totalSchemes':
                     title = 'All Schemes';
                     columns = ['Scheme ID', 'Scheme Name', 'Section Officer', 'Contractor', 'Tasks', 'Avg. Completion'];
-                    rows = schemes.map(s => [escapeHtml(s.scheme_id), escapeHtml(s.scheme_name), escapeHtml(s.section_officer), escapeHtml(s.contractor), s.tasks, s.avg_completion + '%']);
+                    rows = schemes.map(s => [escapeHtml(s.scheme_id), escapeHtml(s.scheme_name), escapeHtml(s
+                        .section_officer), escapeHtml(s.contractor), s.tasks, s.avg_completion + '%']);
                     break;
                 case 'fullyCompleted':
                     title = 'Fully Completed Schemes';
                     const comp = schemes.filter(s => s.allTasksCompleted);
                     columns = ['Scheme ID', 'Scheme Name', 'Section Officer', 'Contractor', 'Tasks', 'Avg. Completion'];
-                    rows = comp.map(s => [escapeHtml(s.scheme_id), escapeHtml(s.scheme_name), escapeHtml(s.section_officer), escapeHtml(s.contractor), s.tasks, '100%']);
+                    rows = comp.map(s => [escapeHtml(s.scheme_id), escapeHtml(s.scheme_name), escapeHtml(s
+                        .section_officer), escapeHtml(s.contractor), s.tasks, '100%']);
                     break;
                 case 'critical':
                     title = 'Critical Tasks (due < 7 days)';
@@ -3060,7 +3586,10 @@
                     rows = crit.map(t => {
                         const s = schemes.find(x => x.scheme_id === t.scheme_id);
                         const d = daysBetween(t.parsedDate, today);
-                        return [escapeHtml(s ? s.scheme_name : t.scheme_id), escapeHtml(t.section_officer), escapeHtml(t.component), escapeHtml(t.task), t.due_date || '-', t.completion + '%', d + 'd'];
+                        return [escapeHtml(s ? s.scheme_name : t.scheme_id), escapeHtml(t.section_officer),
+                            escapeHtml(t.component), escapeHtml(t.task), t.due_date || '-', t.completion +
+                            '%', d + 'd'
+                        ];
                     });
                     break;
                 case 'upcoming':
@@ -3075,7 +3604,10 @@
                     rows = upc.map(t => {
                         const s = schemes.find(x => x.scheme_id === t.scheme_id);
                         const d = daysBetween(t.parsedDate, today);
-                        return [escapeHtml(s ? s.scheme_name : t.scheme_id), escapeHtml(t.section_officer), escapeHtml(t.component), escapeHtml(t.task), t.due_date || '-', t.completion + '%', d + 'd'];
+                        return [escapeHtml(s ? s.scheme_name : t.scheme_id), escapeHtml(t.section_officer),
+                            escapeHtml(t.component), escapeHtml(t.task), t.due_date || '-', t.completion +
+                            '%', d + 'd'
+                        ];
                     });
                     break;
                 case 'scheduled':
@@ -3090,7 +3622,10 @@
                     rows = sch.map(t => {
                         const s = schemes.find(x => x.scheme_id === t.scheme_id);
                         const d = t.parsedDate ? daysBetween(t.parsedDate, today) : null;
-                        return [escapeHtml(s ? s.scheme_name : t.scheme_id), escapeHtml(t.section_officer), escapeHtml(t.component), escapeHtml(t.task), t.due_date || '-', t.completion + '%', d !== null ? d + 'd' : '—'];
+                        return [escapeHtml(s ? s.scheme_name : t.scheme_id), escapeHtml(t.section_officer),
+                            escapeHtml(t.component), escapeHtml(t.task), t.due_date || '-', t.completion +
+                            '%', d !== null ? d + 'd' : '—'
+                        ];
                     });
                     break;
                 default:
@@ -3103,10 +3638,12 @@
             </thead>
             <tbody>`;
             if (rows.length === 0) {
-                tableHTML += `<tr><td colspan="${columns.length}" style="padding:var(--space-8);text-align:center;color:var(--neutral-400);">No items found.</td></tr>`;
+                tableHTML +=
+                    `<tr><td colspan="${columns.length}" style="padding:var(--space-8);text-align:center;color:var(--neutral-400);">No items found.</td></tr>`;
             } else {
                 rows.forEach(row => {
-                    tableHTML += `<tr>${row.map(cell => `<td style="padding:8px 12px;border-bottom:1px solid var(--neutral-100);">${cell}</td>`).join('')}</tr>`;
+                    tableHTML +=
+                        `<tr>${row.map(cell => `<td style="padding:8px 12px;border-bottom:1px solid var(--neutral-100);">${cell}</td>`).join('')}</tr>`;
                 });
             }
             tableHTML += `</tbody></table></div>`;
@@ -3139,29 +3676,29 @@
         function openSCNForScheme(schemeId) {
             const scheme = state.schemes.find(s => s.scheme_id === schemeId);
             if (!scheme) { showToast('Error', 'Scheme not found.', 'error'); return; }
-            
+
             // Get all SCN-eligible schemes
             const scnSchemes = state.schemes.filter(s => s.scnTriggered);
             if (!scnSchemes.length) {
                 showToast('Notice', 'No schemes currently trigger an SCN.', 'info');
                 return;
             }
-            
+
             // Find current index
             const currentIndex = scnSchemes.findIndex(s => s.scheme_id === schemeId);
             if (currentIndex === -1) {
                 showToast('Notice', 'No critical tasks for this scheme.', 'info');
                 return;
             }
-            
+
             // Store SCN schemes for navigation
             window._scnSchemes = scnSchemes;
             window._scnCurrentIndex = currentIndex;
-            
+
             // Render current SCN
             renderSCNContent(currentIndex, scnSchemes);
         }
-        
+
         function renderSCNContent(index, scnSchemes) {
             const scheme = scnSchemes[index];
             const officerSubDivision = getSubDivision(scheme.section_officer) || 'Tinsukia Division';
@@ -3188,28 +3725,28 @@
             });
 
             const bodyHTML = `
-            <div style="margin-bottom:var(--space-3);padding:var(--space-3);background:var(--color-danger-bg);border-radius:var(--radius);border:1px solid var(--color-danger);display:flex;align-items:center;justify-content:space-between;">
+            <div style="margin-bottom:var(--space-3);padding:var(--space-3);background:var(--color-danger-bg);border-radius:var(--radius);border:1px solid var(--color-danger);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2);">
               <div style="font-weight:700;color:var(--color-danger);">
                 <i class="fas fa-exclamation-triangle" aria-hidden="true"></i> 
                 SCN ${index + 1} of ${totalSCN} — Critical Schemes
               </div>
-              <div style="display:flex;gap:var(--space-2);">
-                <button class="btn btn-outline" id="btnPrevSCN" ${index === 0 ? 'disabled' : ''} style="padding:0.3rem 0.7rem;font-size:var(--text-sm);">
-                  <i class="fas fa-chevron-left"></i> Previous
+              <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;">
+                <button class="btn btn-outline" id="btnPrevSCN" ${index === 0 ? 'disabled' : ''} style="padding:0.3rem 0.7rem;font-size:var(--text-sm);min-height:36px;">
+                  <i class="fas fa-chevron-left"></i> <span class="hide-mobile">Previous</span>
                 </button>
-                <button class="btn btn-outline" id="btnNextSCN" ${index === totalSCN - 1 ? 'disabled' : ''} style="padding:0.3rem 0.7rem;font-size:var(--text-sm);">
-                  Next <i class="fas fa-chevron-right"></i>
+                <button class="btn btn-outline" id="btnNextSCN" ${index === totalSCN - 1 ? 'disabled' : ''} style="padding:0.3rem 0.7rem;font-size:var(--text-sm);min-height:36px;">
+                  <span class="hide-mobile">Next</span> <i class="fas fa-chevron-right"></i>
                 </button>
               </div>
             </div>
-            <div style="font-family:'Times New Roman',Times,serif;font-size:12pt;color:#1a1a1a;line-height:1.6;padding:0 5mm;">
-              <h1 style="font-size:16pt;font-weight:700;text-align:center;text-decoration:underline;">SHOW CAUSE NOTICE</h1>
-              <div style="text-align:center;font-size:11pt;">Ref: ${refNo} | Date: ${dateStr}</div>
+            <div style="font-family:'Times New Roman',Times,serif;font-size:11pt;color:#1a1a1a;line-height:1.6;padding:0 3mm;overflow-x:auto;">
+              <h1 style="font-size:14pt;font-weight:700;text-align:center;text-decoration:underline;">SHOW CAUSE NOTICE</h1>
+              <div style="text-align:center;font-size:10pt;">Ref: ${refNo} | Date: ${dateStr}</div>
               <div style="margin:var(--space-3) 0;"><strong>From:</strong> ${escapeHtml(scheme.section_officer)}, Section Officer, ${officerSubDivision}</div>
               <div style="margin:var(--space-2) 0;"><strong>To:</strong> M/s ${escapeHtml(scheme.contractor)}</div>
               ${contractorAddress ? `<div style="margin:var(--space-2) 0;padding-left:var(--space-4);"><strong>Address:</strong> ${escapeHtml(contractorAddress)}</div>` : ''}
               <hr style="border:1px solid #000;margin:var(--space-3) 0;" />
-              <div style="font-weight:700;font-size:12pt;">Subject: Show Cause Notice for Delay in Execution of Works — ${escapeHtml(scheme.scheme_name)}</div>
+              <div style="font-weight:700;font-size:11pt;">Subject: Show Cause Notice for Delay in Execution of Works — ${escapeHtml(scheme.scheme_name)}</div>
               <hr style="border:1px solid #000;margin:var(--space-3) 0;" />
               <p>Whereas, the progress of the above-mentioned work has been reviewed on <strong>${dateStr}</strong>, and it has been observed that the execution is significantly behind schedule.</p>
               <p style="font-weight:700;">The following critical deficiencies have been recorded:</p>
@@ -3221,7 +3758,7 @@
                 <p>Section Officer, ${officerSubDivision}</p>
                 <p>Date: ${dateStr}</p>
               </div>
-              <div style="font-size:9pt;color:#666;border-top:1px solid #999;padding-top:var(--space-2);margin-top:var(--space-4);">System-generated notice. Scheme: ${escapeHtml(scheme.scheme_id)}</div>
+              <div style="font-size:8pt;color:#666;border-top:1px solid #999;padding-top:var(--space-2);margin-top:var(--space-4);">System-generated notice. Scheme: ${escapeHtml(scheme.scheme_id)}</div>
             </div>
           `;
 
@@ -3234,12 +3771,12 @@
             openDrawer('Show Cause Notice', `${scheme.scheme_id} – ${scheme.scheme_name}`, bodyHTML, footerHTML);
             window._scnScheme = scheme;
             window._scnContent = bodyHTML;
-            
+
             // Add navigation event listeners
             setTimeout(() => {
                 const prevBtn = document.getElementById('btnPrevSCN');
                 const nextBtn = document.getElementById('btnNextSCN');
-                
+
                 if (prevBtn) {
                     prevBtn.addEventListener('click', () => {
                         if (window._scnCurrentIndex > 0) {
@@ -3248,7 +3785,7 @@
                         }
                     });
                 }
-                
+
                 if (nextBtn) {
                     nextBtn.addEventListener('click', () => {
                         if (window._scnCurrentIndex < window._scnSchemes.length - 1) {
@@ -3257,16 +3794,16 @@
                         }
                     });
                 }
-                
+
                 // Keyboard navigation
                 document.addEventListener('keydown', scnKeyboardNav);
             }, 100);
         }
-        
+
         function scnKeyboardNav(e) {
             if (!document.getElementById('drawer').classList.contains('open')) return;
             if (!window._scnSchemes) return;
-            
+
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 if (window._scnCurrentIndex > 0) {
@@ -3281,18 +3818,21 @@
                 }
             }
         }
+
         function printSCNFromDrawer() {
             // Extract only the formal SCN content (after the navigation bar)
             const scnContent = window._scnContent || '';
             // Remove the navigation bar from the print content
-            const cleanContent = scnContent.replace(/<div style="margin-bottom:var\(--space-3\);padding:var\(--space-3\);background:var\(--color-danger-bg\)[^]*?<\/div>/, '');
-            
+            const cleanContent = scnContent.replace(
+                /<div style="margin-bottom:var\(--space-3\);padding:var\(--space-3\);background:var\(--color-danger-bg\)[^]*?<\/div>/,
+                '');
+
             const officerSubDivision = getSubDivision(window._scnScheme.section_officer) || 'Tinsukia Division';
             const refNo = `SCN/${window._scnScheme.scheme_id}/${formatDateISO(state.reportDate)}`;
             const dateStr = formatDate(state.reportDate);
             const contractorInfo = state.contractorMap[window._scnScheme.contractor] || {};
             const contractorAddress = contractorInfo.address || '';
-            
+
             let tasksPrintHTML = '';
             window._scnScheme.scnTasks.forEach((t, i) => {
                 const urgency = t.daysRemaining === 0 ? 'Milestone Due Today' :
@@ -3306,20 +3846,21 @@
                   </div>
                 `;
             });
-            
+
             const printHTML = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Show Cause Notice - ${escapeHtml(window._scnScheme.scheme_id)}</title>
   <style>
     @page {
       size: A4;
-      margin: 25mm 20mm 25mm 20mm;
+      margin: 20mm 15mm 20mm 15mm;
     }
     body {
       font-family: 'Times New Roman', Times, serif;
-      font-size: 12pt;
+      font-size: 11pt;
       color: #000;
       line-height: 1.8;
       margin: 0;
@@ -3327,10 +3868,10 @@
     }
     .scn-header {
       text-align: center;
-      margin-bottom: 20pt;
+      margin-bottom: 16pt;
     }
     .scn-header h1 {
-      font-size: 16pt;
+      font-size: 14pt;
       font-weight: bold;
       text-decoration: underline;
       margin: 0 0 4pt 0;
@@ -3338,53 +3879,65 @@
       letter-spacing: 1pt;
     }
     .scn-ref {
-      font-size: 11pt;
+      font-size: 10pt;
       text-align: center;
-      margin-bottom: 16pt;
+      margin-bottom: 14pt;
     }
     .field {
-      margin-bottom: 6pt;
+      margin-bottom: 4pt;
     }
     .field strong {
       display: inline-block;
-      min-width: 60pt;
+      min-width: 50pt;
     }
     .field.address {
-      padding-left: 60pt;
+      padding-left: 50pt;
     }
     hr.divider {
       border: none;
       border-top: 1px solid #000;
-      margin: 14pt 0;
+      margin: 12pt 0;
     }
     .subject {
       font-weight: bold;
-      font-size: 12pt;
-      margin: 12pt 0;
+      font-size: 11pt;
+      margin: 10pt 0;
     }
     .body-text {
-      margin: 10pt 0;
+      margin: 8pt 0;
       text-align: justify;
     }
     .task-section {
-      margin: 12pt 0;
+      margin: 10pt 0;
     }
     .signature-block {
-      margin-top: 30pt;
+      margin-top: 24pt;
     }
     .signature-block p {
       margin: 2pt 0;
     }
     .footer-note {
-      font-size: 9pt;
+      font-size: 8pt;
       color: #666;
       border-top: 1px solid #999;
-      margin-top: 24pt;
-      padding-top: 8pt;
+      margin-top: 20pt;
+      padding-top: 6pt;
     }
     @media print {
       body {
         margin: 0;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 10pt;
+        padding: 5mm;
+      }
+      .scn-header h1 {
+        font-size: 12pt;
       }
     }
   </style>
@@ -3393,60 +3946,60 @@
   <div class="scn-header">
     <h1>Show Cause Notice</h1>
   </div>
-  
+
   <div class="scn-ref">
     Ref: ${refNo} | Date: ${dateStr}
   </div>
-  
+
   <div class="field">
     <strong>From:</strong> ${escapeHtml(window._scnScheme.section_officer)}, Section Officer, ${officerSubDivision}
   </div>
-  
+
   <div class="field">
     <strong>To:</strong> M/s ${escapeHtml(window._scnScheme.contractor)}
   </div>
-  
-  ${contractorAddress ? `<div class="field address">${escapeHtml(contractorAddress)}</div>` : ''}
-  
+
+  ${contractorAddress ? `<div class="field.address">${escapeHtml(contractorAddress)}</div>` : ''}
+
   <hr class="divider" />
-  
+
   <div class="subject">
     Subject: Show Cause Notice for Delay in Execution of Works &mdash; ${escapeHtml(window._scnScheme.scheme_name)}
   </div>
-  
+
   <hr class="divider" />
-  
+
   <p class="body-text">
     Whereas, the progress of the above-mentioned work has been reviewed on <strong>${dateStr}</strong>, 
     and it has been observed that the execution is significantly behind schedule.
   </p>
-  
+
   <p class="body-text">
     <strong>The following critical deficiencies have been recorded:</strong>
   </p>
-  
-  <ol style="margin:8pt 0;padding-left:24pt;">
+
+  <ol style="margin:6pt 0;padding-left:20pt;">
     ${window._scnScheme.scnTasks.map((t, i) => 
       `<li>${escapeHtml(t.component)} &ndash; ${escapeHtml(t.task)} (${t.completion}%, ${t.daysRemaining}d)</li>`
     ).join('')}
   </ol>
-  
+
   <div class="task-section">
     ${tasksPrintHTML}
   </div>
-  
+
   <p class="body-text">
     You are hereby called upon to <strong>SHOW CAUSE</strong> within <strong>Seven (07) days</strong> 
     from receipt of this notice as to why appropriate action should not be initiated against you 
     under the relevant clauses of the contract agreement.
   </p>
-  
+
   <p class="body-text">
     Please note that failure to submit a satisfactory reply within the stipulated period will be 
     construed as an admission of the lapses and the department will be at liberty to proceed 
     against you in accordance with the terms and conditions of the agreement.
   </p>
-  
+
   <div class="signature-block">
     <p>&nbsp;</p>
     <p>&nbsp;</p>
@@ -3455,19 +4008,19 @@
     <p>${officerSubDivision}</p>
     <p>Date: ${dateStr}</p>
   </div>
-  
-  <p style="margin-top:14pt;font-size:10pt;">
+
+  <p style="margin-top:12pt;font-size:9pt;">
     <strong>Copy to:</strong><br/>
     1. Executive Engineer, DWSM Tinsukia Division.<br/>
     2. Office copy for record.
   </p>
-  
+
   <div class="footer-note">
     System-generated notice &middot; Scheme: ${escapeHtml(window._scnScheme.scheme_id)}
   </div>
 </body>
 </html>`;
-            
+
             const w = window.open('', '_blank');
             w.document.write(printHTML);
             w.document.close();
@@ -3506,7 +4059,7 @@
             let filteredSchemes = [...state.schemes];
             const subDiv = document.getElementById('quickReportSubDivision').value;
             const officer = document.getElementById('quickReportSectionOfficer').value;
-            
+
             // For officers, always filter to their own schemes
             if (state.userRole === 'officer') {
                 filteredSchemes = filteredSchemes.filter(s => s.section_officer === state.loggedInOfficer);
@@ -3519,7 +4072,7 @@
                     filteredSchemes = filteredSchemes.filter(s => s.section_officer === officer);
                 }
             }
-            
+
             const ids = new Set(filteredSchemes.map(s => s.scheme_id));
             const filteredRaw = state.rawData.filter(r => ids.has(r.scheme_id));
             return { schemes: filteredSchemes, rawData: filteredRaw };
@@ -3594,8 +4147,8 @@
             <div class="report-preview">
               <div class="header">
                 <h1>Jal Jeevan Mission (JJM 2.0)</h1>
-                <div style="font-size:14pt;font-weight:700;">${division}</div>
-                <div style="font-size:11pt;">Report Date: ${reportDate}${filterNote}</div>
+                <div style="font-size:13pt;font-weight:700;">${division}</div>
+                <div style="font-size:10pt;">Report Date: ${reportDate}${filterNote}</div>
               </div>
               ${html}
               <div class="footer">Generated by JJM 2.0 Monitoring System</div>
@@ -3604,7 +4157,7 @@
 
             openDrawer('Quick Report', type.replace(/([A-Z])/g, ' $1').trim(), wrapped, `
             ${type === 'tasksDueWeekByWeek' ? `
-              <div style="margin-bottom:var(--space-3);padding:0 var(--space-3);border-right:1px solid var(--neutral-200);">
+              <div style="margin-bottom:var(--space-3);padding:0 var(--space-3);border-right:1px solid var(--neutral-200);flex:1;min-width:120px;">
                 <label style="font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--neutral-500);display:block;margin-bottom:var(--space-1);">Filter by Week</label>
                 <select id="weekFilterSelect" style="padding:0.4rem;border:1px solid var(--neutral-300);border-radius:var(--radius);font-size:var(--text-sm);width:100%;">
                   <option value="">All Weeks</option>
@@ -3620,14 +4173,16 @@
 
         function printReportFromDrawer() {
             const html = `
-            <!DOCTYPE html><html><head><meta charset="UTF-8"><title>Quick Report</title>
+            <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Quick Report</title>
             <style>
-              body{font-family:'Times New Roman',Times,serif;margin:15mm;color:#000;}
-              .header{text-align:center;border-bottom:2px solid #000;padding-bottom:5mm;margin-bottom:8mm;}
-              .footer{text-align:center;font-size:9pt;color:#666;margin-top:8mm;border-top:1px solid #ddd;padding-top:3mm;}
-              table{width:100%;border-collapse:collapse;margin:4mm 0;}
-              th,td{border:1px solid #666;padding:3px 5px;text-align:left;font-size:10pt;}
+              body{font-family:'Times New Roman',Times,serif;margin:12mm;color:#000;}
+              .header{text-align:center;border-bottom:2px solid #000;padding-bottom:4mm;margin-bottom:6mm;}
+              .footer{text-align:center;font-size:8pt;color:#666;margin-top:6mm;border-top:1px solid #ddd;padding-top:2mm;}
+              table{width:100%;border-collapse:collapse;margin:3mm 0;}
+              th,td{border:1px solid #666;padding:3px 4px;text-align:left;font-size:9pt;}
               th{background:#f0f0f0;}
+              @media (max-width:600px){body{margin:5mm;font-size:9pt;} th,td{font-size:8pt;padding:2px 3px;}}
+              @media print{body{margin:0;}}
             </style>
             </head><body>${window._reportHTML}</body></html>
           `;
@@ -3670,7 +4225,7 @@
 
         function generateSchemeActionPlan(schemes, rawData) {
             const sorted = [...schemes].sort((a, b) => a.scheme_name.localeCompare(b.scheme_name));
-            let html = '<h2>Scheme‑Wise Action Plan</h2><div style="font-size:11pt;">';
+            let html = '<h2>Scheme‑Wise Action Plan</h2><div style="font-size:10pt;">';
             sorted.forEach(s => {
                 const tasks = rawData.filter(r => r.scheme_id === s.scheme_id);
                 tasks.sort((a, b) => (a.parsedDate || 0) - (b.parsedDate || 0));
@@ -3678,14 +4233,14 @@
                 const progress = physical !== null ? physical : s.avg_completion;
                 const deadline = s.latestDueDate ? formatDate(s.latestDueDate) : 'No deadline';
                 html += `
-                  <div style="border:1px solid #ccc;border-radius:6px;margin-bottom:12px;page-break-inside:avoid;">
-                    <div style="background:#f8fafc;padding:8px 14px;font-weight:700;display:flex;flex-wrap:wrap;justify-content:space-between;">
+                  <div style="border:1px solid #ccc;border-radius:6px;margin-bottom:10px;page-break-inside:avoid;overflow-x:auto;">
+                    <div style="background:#f8fafc;padding:6px 10px;font-weight:700;display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px;font-size:9pt;">
                       <span>${escapeHtml(s.scheme_name)} (${escapeHtml(s.scheme_id)})</span>
                       <span>Physical: ${progress}% · Deadline: ${deadline}</span>
                       <span>Officer: ${escapeHtml(s.section_officer)}</span>
                     </div>
-                    <div style="padding:8px 14px;">
-                      <table>
+                    <div style="padding:6px 10px;overflow-x:auto;">
+                      <table style="font-size:8pt;min-width:300px;">
                         <thead><tr><th>Sl.</th><th>Activity</th><th>Target Date</th></tr></thead>
                         <tbody>
                           ${tasks.length ? tasks.map((t,i) => `<tr><td>${i+1}</td><td>${escapeHtml(t.component)} - ${escapeHtml(t.task)}</td><td>${t.due_date||'-'}</td></tr>`).join('') : '<tr><td colspan="3">No tasks defined</td></tr>'}
@@ -3700,8 +4255,11 @@
         }
 
         function generateSchemesByDeadline(schemes) {
-            const d1 = new Date(2026, 7, 15), d2 = new Date(2026, 8, 16);
-            const cat1 = [], cat2 = [], cat3 = [];
+            const d1 = new Date(2026, 7, 15),
+                d2 = new Date(2026, 8, 16);
+            const cat1 = [],
+                cat2 = [],
+                cat3 = [];
             schemes.forEach(s => {
                 if (!s.latestDueDate) cat3.push(s);
                 else if (s.latestDueDate <= d1) cat1.push(s);
@@ -3721,7 +4279,7 @@
                 return `
                   <tr><td><strong>${label}</strong></td><td>${list.length}</td></tr>
                   ${list.length ? `<tr><td colspan="2">
-                    <table>
+                    <table style="font-size:8pt;">
                       <thead><tr><th>Scheme</th><th>Contractor</th><th>Officer</th><th>Due Date</th></tr></thead>
                       <tbody>${list.map(s => `<tr><td>${escapeHtml(s.scheme_name)}</td><td>${escapeHtml(s.contractor)}</td><td>${escapeHtml(s.section_officer)}</td><td>${s.latestDueDate ? formatDate(s.latestDueDate) : 'No date'}</td></tr>`).join('')}</tbody>
                     </table>
@@ -3742,7 +4300,8 @@
         }
 
         function generateSchemesByDeadlineOfficerWise(schemes) {
-            const d1 = new Date(2026, 7, 15), d2 = new Date(2026, 8, 16);
+            const d1 = new Date(2026, 7, 15),
+                d2 = new Date(2026, 8, 16);
             const enriched = schemes.map(s => {
                 let status = 'No due date';
                 if (s.latestDueDate) {
@@ -3760,7 +4319,8 @@
             });
             let rows = '';
             enriched.forEach((s, i) => {
-                rows += `<tr><td>${i+1}</td><td>${escapeHtml(s.section_officer)}</td><td>${escapeHtml(s.scheme_name)}</td><td>${s.latestDueDate ? formatDate(s.latestDueDate) : 'No date'}</td><td>${s.avg_completion}%</td></tr>`;
+                rows +=
+                    `<tr><td>${i+1}</td><td>${escapeHtml(s.section_officer)}</td><td>${escapeHtml(s.scheme_name)}</td><td>${s.latestDueDate ? formatDate(s.latestDueDate) : 'No date'}</td><td>${s.avg_completion}%</td></tr>`;
             });
             return `
             <h2>Schemes by Deadline – Officer Wise</h2>
@@ -3806,7 +4366,8 @@
             weeks.forEach(w => header += `<th>${w.label}</th>`);
             header += '<th>Total</th>';
 
-            let body = '', details = '';
+            let body = '',
+                details = '';
             Object.entries(officerTasks).sort().forEach(([off, weekTasks]) => {
                 let row = `<td><strong>${escapeHtml(off)}</strong></td>`;
                 let total = 0;
@@ -3823,13 +4384,13 @@
                         const weekLabel = weeks[idx].label;
                         details += `
                           <tr style="background:#f9fafb;">
-                            <td colspan="${weeks.length+2}" style="padding:8px 12px;">
-                              <div style="font-weight:700;margin-bottom:var(--space-2);color:var(--neutral-700);">Section Officer: ${escapeHtml(off)} | Week Details — ${weekLabel}</div>
-                              <table style="font-size:9pt;width:100%;">
-                                <thead><tr><th style="padding:4px 6px;text-align:left;">Scheme</th><th style="padding:4px 6px;text-align:left;">Component</th><th style="padding:4px 6px;text-align:left;">Task</th><th style="padding:4px 6px;text-align:left;">Due</th><th style="padding:4px 6px;text-align:center;">Progress</th></tr></thead>
+                            <td colspan="${weeks.length+2}" style="padding:6px 8px;">
+                              <div style="font-weight:700;margin-bottom:var(--space-2);color:var(--neutral-700);font-size:9pt;">Section Officer: ${escapeHtml(off)} | Week Details — ${weekLabel}</div>
+                              <table style="font-size:8pt;width:100%;min-width:300px;">
+                                <thead><tr><th style="padding:3px 5px;text-align:left;">Scheme</th><th style="padding:3px 5px;text-align:left;">Component</th><th style="padding:3px 5px;text-align:left;">Task</th><th style="padding:3px 5px;text-align:left;">Due</th><th style="padding:3px 5px;text-align:center;">Progress</th></tr></thead>
                                 <tbody>${tasks.map(t => {
                                   const sn = schemeNameMap[t.scheme_id] || t.scheme_id;
-                                  return `<tr><td style="padding:4px 6px;">${escapeHtml(sn)}</td><td style="padding:4px 6px;">${escapeHtml(t.component)}</td><td style="padding:4px 6px;">${escapeHtml(t.task)}</td><td style="padding:4px 6px;">${t.due_date||'-'}</td><td style="padding:4px 6px;text-align:center;">${t.completion}%</td></tr>`;
+                                  return `<tr><td style="padding:3px 5px;">${escapeHtml(sn)}</td><td style="padding:3px 5px;">${escapeHtml(t.component)}</td><td style="padding:3px 5px;">${escapeHtml(t.task)}</td><td style="padding:3px 5px;">${t.due_date||'-'}</td><td style="padding:3px 5px;text-align:center;">${t.completion}%</td></tr>`;
                                 }).join('')}</tbody>
                               </table>
                             </td>
@@ -3858,12 +4419,15 @@
             const map = {};
             schemes.forEach(s => {
                 if (!s.latestDueDate) return;
-                const key = `${s.latestDueDate.getFullYear()}-${String(s.latestDueDate.getMonth()+1).padStart(2,'0')}`;
+                const key =
+                `${s.latestDueDate.getFullYear()}-${String(s.latestDueDate.getMonth()+1).padStart(2,'0')}`;
                 if (!map[key]) map[key] = { schemes: 0, total: 0 };
                 map[key].schemes++;
                 map[key].total += s.avg_completion;
             });
-            let rows = '', totalS = 0, totalC = 0;
+            let rows = '',
+                totalS = 0,
+                totalC = 0;
             Object.keys(map).sort().forEach(m => {
                 const d = map[m];
                 totalS += d.schemes;
@@ -3886,12 +4450,15 @@
             const map = {};
             rawData.forEach(t => {
                 if (!t.parsedDate) return;
-                const key = `${t.parsedDate.getFullYear()}-${String(t.parsedDate.getMonth()+1).padStart(2,'0')}`;
+                const key =
+                `${t.parsedDate.getFullYear()}-${String(t.parsedDate.getMonth()+1).padStart(2,'0')}`;
                 if (!map[key]) map[key] = { tasks: 0, total: 0 };
                 map[key].tasks++;
                 map[key].total += t.completion;
             });
-            let rows = '', totalT = 0, totalC = 0;
+            let rows = '',
+                totalT = 0,
+                totalC = 0;
             Object.keys(map).sort().forEach(m => {
                 const d = map[m];
                 totalT += d.tasks;
@@ -3922,7 +4489,12 @@
                 else if (days !== null && days >= 7 && days <= 30) map[c].upcoming++;
                 else if (days !== null) map[c].scheduled++;
             });
-            let rows = '', totalT = 0, totalC = 0, totalCrit = 0, totalUp = 0, totalSch = 0;
+            let rows = '',
+                totalT = 0,
+                totalC = 0,
+                totalCrit = 0,
+                totalUp = 0,
+                totalSch = 0;
             Object.entries(map).forEach(([c, d]) => {
                 totalT += d.tasks;
                 totalC += d.total;
@@ -3930,7 +4502,8 @@
                 totalUp += d.upcoming;
                 totalSch += d.scheduled;
                 const avg = Math.round(d.total / d.tasks);
-                rows += `<tr><td>${escapeHtml(c)}</td><td>${d.tasks}</td><td>${avg}%</td><td>${d.critical}</td><td>${d.upcoming}</td><td>${d.scheduled}</td></tr>`;
+                rows +=
+                    `<tr><td>${escapeHtml(c)}</td><td>${d.tasks}</td><td>${avg}%</td><td>${d.critical}</td><td>${d.upcoming}</td><td>${d.scheduled}</td></tr>`;
             });
             const overall = totalT ? Math.round(totalC / totalT) : 0;
             return `
@@ -4020,8 +4593,9 @@
                 let row = `<td>${escapeHtml(s.scheme_name)}</td>`;
                 months.forEach(m => {
                     let marker = '';
-                    if (s.latestDueDate && s.latestDueDate.getMonth() === m.month && s.latestDueDate.getFullYear() === 2026) {
-                        marker = '<span style="display:inline-block;width:14px;height:14px;background:#0d9488;border-radius:50%;"></span>';
+                    if (s.latestDueDate && s.latestDueDate.getMonth() === m.month && s.latestDueDate
+                        .getFullYear() === 2026) {
+                        marker = '<span style="display:inline-block;width:12px;height:12px;background:#0d9488;border-radius:50%;"></span>';
                     }
                     row += `<td style="text-align:center;">${marker}</td>`;
                 });
@@ -4033,7 +4607,7 @@
               <thead><tr>${header}</tr></thead>
               <tbody>${body}</tbody>
             </table>
-            <p style="font-size:9pt;color:#666;">● Green = final due month. Sorted by earliest due date.</p>
+            <p style="font-size:8pt;color:#666;">● Green = final due month. Sorted by earliest due date.</p>
           `;
         }
 
@@ -4057,11 +4631,12 @@
             Object.keys(groups).sort().forEach(off => {
                 body += `<tr style="background:#f0f4f8;font-weight:700;"><td colspan="${months.length+1}">${escapeHtml(off)}</td></tr>`;
                 groups[off].forEach(s => {
-                    let row = `<td style="padding-left:24px;">${escapeHtml(s.scheme_name)}</td>`;
+                    let row = `<td style="padding-left:16px;">${escapeHtml(s.scheme_name)}</td>`;
                     months.forEach(m => {
                         let marker = '';
-                        if (s.latestDueDate && s.latestDueDate.getMonth() === m.month && s.latestDueDate.getFullYear() === 2026) {
-                            marker = '<span style="display:inline-block;width:14px;height:14px;background:#0d9488;border-radius:50%;"></span>';
+                        if (s.latestDueDate && s.latestDueDate.getMonth() === m.month && s.latestDueDate
+                            .getFullYear() === 2026) {
+                            marker = '<span style="display:inline-block;width:12px;height:12px;background:#0d9488;border-radius:50%;"></span>';
                         }
                         row += `<td style="text-align:center;">${marker}</td>`;
                     });
@@ -4074,7 +4649,7 @@
               <thead><tr>${header}</tr></thead>
               <tbody>${body}</tbody>
             </table>
-            <p style="font-size:9pt;color:#666;">● Green = final due month. Sorted by earliest due date.</p>
+            <p style="font-size:8pt;color:#666;">● Green = final due month. Sorted by earliest due date.</p>
           `;
         }
 
@@ -4129,7 +4704,8 @@
             arr.sort((a, b) => parseFloat(b.avg) - parseFloat(a.avg));
             let rows = '';
             arr.forEach((item, i) => {
-                rows += `<tr><td>${i+1}</td><td>${escapeHtml(item.contractor)}</td><td>${item.schemes}</td><td>${item.tasks}</td><td>${item.avg}%</td><td>${item.critical}</td><td>${item.upcoming}</td><td>${item.scheduled}</td></tr>`;
+                rows +=
+                    `<tr><td>${i+1}</td><td>${escapeHtml(item.contractor)}</td><td>${item.schemes}</td><td>${item.tasks}</td><td>${item.avg}%</td><td>${item.critical}</td><td>${item.upcoming}</td><td>${item.scheduled}</td></tr>`;
             });
             return `
             <h2>Performance – Contractors by Avg. Completion</h2>
@@ -4164,7 +4740,8 @@
             arr.sort((a, b) => parseFloat(b.avg) - parseFloat(a.avg));
             let rows = '';
             arr.forEach((item, i) => {
-                rows += `<tr><td>${i+1}</td><td>${escapeHtml(item.officer)}</td><td>${item.schemes}</td><td>${item.tasks}</td><td>${item.avg}%</td><td>${item.critical}</td><td>${item.upcoming}</td><td>${item.scheduled}</td></tr>`;
+                rows +=
+                    `<tr><td>${i+1}</td><td>${escapeHtml(item.officer)}</td><td>${item.schemes}</td><td>${item.tasks}</td><td>${item.avg}%</td><td>${item.critical}</td><td>${item.upcoming}</td><td>${item.scheduled}</td></tr>`;
             });
             return `
             <h2>Performance – Section Officers by Avg. Completion</h2>
@@ -4189,11 +4766,11 @@
             <div style="padding:var(--space-2) 0;">
               <div style="margin-bottom:var(--space-4);">
                 <label style="display:block;font-weight:600;font-size:var(--text-sm);margin-bottom:var(--space-1);">Section Officer</label>
-                <select id="roadmapOfficerSelect" style="width:100%;padding:0.6rem;border:1px solid var(--neutral-300);border-radius:var(--radius);font-size:var(--text-sm);">${options}</select>
+                <select id="roadmapOfficerSelect" style="width:100%;padding:0.6rem;border:1px solid var(--neutral-300);border-radius:var(--radius);font-size:var(--text-sm);min-height:var(--touch-min);">${options}</select>
               </div>
               <div style="margin-bottom:var(--space-4);">
                 <label style="display:block;font-weight:600;font-size:var(--text-sm);margin-bottom:var(--space-1);">Paper Size</label>
-                <select id="roadmapPaperSize" style="width:100%;padding:0.6rem;border:1px solid var(--neutral-300);border-radius:var(--radius);font-size:var(--text-sm);">
+                <select id="roadmapPaperSize" style="width:100%;padding:0.6rem;border:1px solid var(--neutral-300);border-radius:var(--radius);font-size:var(--text-sm);min-height:var(--touch-min);">
                   <option value="A4">A4</option>
                   <option value="Legal">Legal</option>
                 </select>
@@ -4255,20 +4832,28 @@
                 `;
             });
 
-            const fullHTML = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Roadmap – ${escapeHtml(officer)}</title>
+            const fullHTML = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Roadmap – ${escapeHtml(officer)}</title>
             <style>
-              @page { size: ${pageWidth} ${pageHeight}; margin: 12mm; }
-              body { font-family: 'Times New Roman', Times, serif; color: #000; line-height: 1.4; }
+              @page { size: ${pageWidth} ${pageHeight}; margin: 10mm; }
+              body { font-family: 'Times New Roman', Times, serif; color: #000; line-height: 1.4; font-size: 10pt; }
               .scheme-page { page-break-after: always; }
               .scheme-page:last-child { page-break-after: auto; }
-              h2 { font-size: 16pt; margin-top: 0; }
-              h3 { font-size: 13pt; border-bottom: 1px solid #999; padding-bottom: 2px; }
-              .task-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
-              .task-table th, .task-table td { border: 1px solid #666; padding: 3px 5px; font-size: 10pt; }
+              h2 { font-size: 14pt; margin-top: 0; }
+              h3 { font-size: 12pt; border-bottom: 1px solid #999; padding-bottom: 2px; }
+              .task-table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+              .task-table th, .task-table td { border: 1px solid #666; padding: 3px 5px; font-size: 9pt; }
               .task-table th { background: #f0f0f0; }
-              .signature-section { margin-top: 16px; display: flex; justify-content: space-between; }
-              .signature-box { width: 45%; text-align: center; }
-              .signature-line { border-top: 1px solid #000; margin-top: 24px; margin-bottom: 4px; }
+              .signature-section { margin-top: 14px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+              .signature-box { width: 45%; text-align: center; min-width: 120px; }
+              .signature-line { border-top: 1px solid #000; margin-top: 20px; margin-bottom: 4px; }
+              @media (max-width: 600px) {
+                body { font-size: 9pt; padding: 5mm; }
+                .signature-box { width: 100%; }
+                .task-table th, .task-table td { font-size: 8pt; padding: 2px 3px; }
+              }
+              @media print {
+                body { margin: 0; padding: 0; }
+              }
             </style></head><body>
             ${schemesHTML}
             </body></html>`;
@@ -4287,27 +4872,27 @@
         function openReportDrawer() {
             const officers = [...new Set(state.schemes.map(s => s.section_officer).filter(Boolean))].sort();
             const subDivisions = [...new Set(Object.values(OFFICER_SUB_DIVISION).filter(Boolean))].sort();
-            
+
             const bodyHTML = `
             <div style="padding:var(--space-2) 0;">
-              <p style="color:var(--neutral-500);margin-bottom:var(--space-4);">Generate a comprehensive abstract report with all schemes.</p>
+              <p style="color:var(--neutral-500);margin-bottom:var(--space-4);font-size:var(--text-sm);">Generate a comprehensive abstract report with all schemes.</p>
               <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);margin-bottom:var(--space-4);">
-                <div style="flex:1;min-width:160px;">
+                <div style="flex:1;min-width:140px;">
                   <label style="display:block;font-weight:600;font-size:var(--text-sm);">Section Officer</label>
-                  <select id="reportOfficerFilter" style="width:100%;padding:0.5rem;border:1px solid var(--neutral-300);border-radius:var(--radius);font-size:var(--text-sm);">
+                  <select id="reportOfficerFilter" style="width:100%;padding:0.5rem;border:1px solid var(--neutral-300);border-radius:var(--radius);font-size:var(--text-sm);min-height:var(--touch-min);">
                     <option value="">All Officers</option>
                     ${officers.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('')}
                   </select>
                 </div>
-                <div style="flex:1;min-width:160px;">
+                <div style="flex:1;min-width:140px;">
                   <label style="display:block;font-weight:600;font-size:var(--text-sm);">Sub‑Division</label>
-                  <select id="reportSubDivisionFilter" style="width:100%;padding:0.5rem;border:1px solid var(--neutral-300);border-radius:var(--radius);font-size:var(--text-sm);">
+                  <select id="reportSubDivisionFilter" style="width:100%;padding:0.5rem;border:1px solid var(--neutral-300);border-radius:var(--radius);font-size:var(--text-sm);min-height:var(--touch-min);">
                     <option value="">All</option>
                     ${subDivisions.map(sd => `<option value="${escapeHtml(sd)}">${escapeHtml(sd)}</option>`).join('')}
                   </select>
                 </div>
               </div>
-              <div id="reportPreviewContainer" style="background:var(--neutral-50);border-radius:var(--radius);padding:var(--space-3);max-height:400px;overflow-y:auto;font-size:10pt;">
+              <div id="reportPreviewContainer" style="background:var(--neutral-50);border-radius:var(--radius);padding:var(--space-3);max-height:400px;overflow-y:auto;font-size:9pt;">
                 <p style="color:var(--neutral-400);text-align:center;padding:var(--space-6);">Select filters and click "Generate" below.</p>
               </div>
             </div>
@@ -4331,18 +4916,20 @@
 
             document.getElementById('btnPrintReportDrawer').addEventListener('click', () => {
                 const html = `
-                  <!DOCTYPE html><html><head><meta charset="UTF-8"><title>Abstract Report</title>
+                  <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Abstract Report</title>
                   <style>
-                    body{font-family:'Times New Roman',Times,serif;margin:15mm;color:#000;line-height:1.5;}
-                    .report-header{text-align:center;border-bottom:2px solid #000;padding-bottom:5mm;margin-bottom:8mm;}
-                    .report-header h1{font-size:20pt;margin:0;}
-                    .report-header .sub{font-size:14pt;font-weight:700;}
-                    .report-header .meta{font-size:11pt;}
-                    h2{font-size:14pt;font-weight:700;border-bottom:1px solid #999;padding-bottom:2mm;margin-top:6mm;}
+                    body{font-family:'Times New Roman',Times,serif;margin:12mm;color:#000;line-height:1.5;}
+                    .report-header{text-align:center;border-bottom:2px solid #000;padding-bottom:4mm;margin-bottom:6mm;}
+                    .report-header h1{font-size:18pt;margin:0;}
+                    .report-header .sub{font-size:13pt;font-weight:700;}
+                    .report-header .meta{font-size:10pt;}
+                    h2{font-size:13pt;font-weight:700;border-bottom:1px solid #999;padding-bottom:2mm;margin-top:5mm;}
                     table{width:100%;border-collapse:collapse;margin:3mm 0;}
-                    th,td{border:1px solid #666;padding:3px 5px;font-size:10pt;}
+                    th,td{border:1px solid #666;padding:3px 5px;font-size:9pt;}
                     th{background:#f0f0f0;}
-                    .footer{text-align:center;font-size:9pt;color:#666;margin-top:8mm;border-top:1px solid #ddd;padding-top:3mm;}
+                    .footer{text-align:center;font-size:8pt;color:#666;margin-top:6mm;border-top:1px solid #ddd;padding-top:2mm;}
+                    @media (max-width:600px){body{margin:5mm;font-size:9pt;} th,td{font-size:8pt;padding:2px 3px;}}
+                    @media print{body{margin:0;}}
                   </style></head><body>${window._reportFullHTML}</body></html>
                 `;
                 const w = window.open('', '_blank');
@@ -4375,7 +4962,8 @@
 
             let schemeRows = '';
             schemes.sort((a, b) => a.section_officer.localeCompare(b.section_officer)).forEach(s => {
-                schemeRows += `<tr><td>${escapeHtml(s.scheme_id)}</td><td>${escapeHtml(s.scheme_name)}</td><td>${escapeHtml(s.section_officer)}</td><td>${escapeHtml(s.contractor)}</td><td>${s.tasks}</td><td>${s.avg_completion}%</td><td>${s.critical}</td><td>${s.upcoming}</td><td>${s.scheduled}</td></tr>`;
+                schemeRows +=
+                    `<tr><td>${escapeHtml(s.scheme_id)}</td><td>${escapeHtml(s.scheme_name)}</td><td>${escapeHtml(s.section_officer)}</td><td>${escapeHtml(s.contractor)}</td><td>${s.tasks}</td><td>${s.avg_completion}%</td><td>${s.critical}</td><td>${s.upcoming}</td><td>${s.scheduled}</td></tr>`;
             });
 
             const offMap = {};
@@ -4391,7 +4979,8 @@
             });
             let offRows = '';
             Object.entries(offMap).forEach(([o, d]) => {
-                offRows += `<tr><td>${escapeHtml(o)}</td><td>${d.schemes}</td><td>${d.tasks}</td><td>${Math.round(d.total/d.tasks)}%</td><td>${d.critical}</td><td>${d.upcoming}</td><td>${d.scheduled}</td></tr>`;
+                offRows +=
+                    `<tr><td>${escapeHtml(o)}</td><td>${d.schemes}</td><td>${d.tasks}</td><td>${Math.round(d.total/d.tasks)}%</td><td>${d.critical}</td><td>${d.upcoming}</td><td>${d.scheduled}</td></tr>`;
             });
 
             return `
@@ -4463,7 +5052,8 @@
                     });
                     const icon = th.querySelector('.sort-icon i');
                     if (icon) {
-                        icon.className = state.sortDirection === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+                        icon.className = state.sortDirection === 'asc' ? 'fas fa-sort-up' :
+                            'fas fa-sort-down';
                         icon.style.color = 'var(--brand-primary)';
                         icon.style.opacity = '1';
                     }
@@ -4478,9 +5068,18 @@
                     closeDrawer();
                 }
             });
+
+            // Small screen helper: hide "Previous/Next" text on very small screens
+            const style = document.createElement('style');
+            style.textContent = `
+            @media (max-width: 480px) {
+              .hide-mobile { display: none !important; }
+            }
+          `;
+            document.head.appendChild(style);
         });
 
-        console.log('JJM 2.0 Dashboard loaded successfully.');
+        console.log('JJM 2.0 Dashboard loaded successfully (mobile-friendly).');
     </script>
 </body>
 </html>
